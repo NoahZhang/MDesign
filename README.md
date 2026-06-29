@@ -1,134 +1,156 @@
-# Claude Design (MDesign)
+# MDesign
 
-A project-based design workspace, recreated from the **Claude Design** UI in
-`claude_design_system_prompt.md`. Two screens:
+A desktop design workspace where an AI agent builds **real, runnable UI** — prototypes,
+pages, components, slide decks — as HTML/JSX files inside a project, with a live preview on
+the right. Inspired by the Claude Design workflow.
 
-- **Gallery** (`/`) — create / search / open projects, grouped as cards with a
-  "New project" rail and a "Set up design system" card.
-- **Workspace** (`/p/:id`) — a **chat agent on the left**, **Design Files + live
-  preview on the right**. When the agent writes a file it appears in the file
-  tree immediately and renders in the preview.
+It ships as an **Electron app** (Chromium renderer + Node main process) with a small **Rust
+sidecar** for storage and native PDF extraction. The agent can run two ways:
 
-The chat is a real **agent** (a tool-using loop), built on a small
-provider-agnostic LLM layer that speaks **both the Anthropic and OpenAI
-protocols**. The framework is modeled on
-[`earendil-works/pi`](https://github.com/earendil-works/pi) — its `pi-ai`
-(unified multi-provider LLM API) and `pi-agent-core` (agent runtime with tool
-calling + state) package split.
+- **API mode** — an in-process agent loop ([`pi-agent-core`](https://github.com/earendil-works/pi)
+  + `pi-ai`) talks directly to a model (Anthropic- or OpenAI-protocol, e.g. Volcengine Ark / GLM).
+- **CLI mode** — drives a local coding CLI (**codex / opencode / claude code**) as a child
+  process, with native session resume.
 
-## Run
+Both modes stream messages + files live, ask clarifying questions as a selectable form,
+apply a design system consistently, and run a post-generation self-check.
+
+---
+
+## Quick start
 
 ```bash
 npm install
-npm run dev      # http://localhost:5173
-npm run build    # typecheck + production build
+
+# Web/dev (browser, fastest iteration — agent runs in-page via a dev proxy)
+npm run dev            # http://localhost:5173
+
+# Desktop (Electron) against the dev server
+npm run electron:dev
+
+# Build & package a macOS .dmg (frontend + agent bundle + Rust sidecar)
+npm run dist:mac       # → electron-dist/MDesign-<ver>-arm64.dmg
 ```
 
-No API key required: with no key the chat runs a built-in **demo agent** that
-still streams a reply and writes a real HTML file into the project. Add a key
-in the composer's model menu → *Model settings…* to use a live model.
+**Requirements:** Node 18+, npm. For `dist:mac`: Rust/Cargo (the sidecar) and Xcode CLT.
+For **CLI mode**: the chosen CLI installed and logged in locally — `codex` (`codex login`),
+`opencode` (`opencode auth`), or `claude` (`claude` / setup-token).
+
+### Scripts
+
+| Script | What it does |
+| --- | --- |
+| `npm run dev` | Vite dev server (browser; agent via dev proxy) |
+| `npm run build` | `tsc --noEmit` + Vite production build |
+| `npm run build:agent` | Bundle `src/agent-main` → `electron/agent.bundle.mjs` (esbuild) |
+| `npm run build:sidecar` | `cargo build --release` the Rust sidecar |
+| `npm run electron` / `electron:dev` | Run the packaged renderer / dev renderer in Electron |
+| `npm run dist:mac` | Full build + agent bundle + sidecar + `electron-builder --mac` |
+
+---
 
 ## Architecture
 
 ```
+electron/                 ← Electron main process (Node)
+  main.cjs                spawns the Rust sidecar, loads the UI, downloads, nav policy
+  preload.cjs             window.mdesign bridge (agent run/stop/events)
+  agent-ipc.cjs           IPC: agent:run (API) · cli:run (CLI) · ds:generate · cli:models
+  cli-agent.cjs           CLI adapters (codex/opencode/claude): spawn, parse stream, sync files
+  agent.bundle.mjs        ← generated: bundled API agent loop (gitignored)
+  afterPack.cjs           ad-hoc codesign so the .app isn't flagged "damaged" on transfer
+
 src/
-  pi-ai/                      ← provider-agnostic LLM layer (mirrors pi-ai)
-    types.ts                  Message / Tool / Context / StreamEvent / Model
-    index.ts                  stream(model, context, opts) · complete(...)
-    models.ts                 model catalog + resolveModel()
-    sse.ts                    shared SSE reader
-    adapters/
-      anthropic.ts            Anthropic Messages API (streaming + tool_use)
-      openai.ts               OpenAI Chat Completions (streaming + tool_calls)
-      mock.ts                 offline demo provider (same event vocabulary)
-  agent/                      ← agent runtime (mirrors pi-agent-core)
-    agent.ts                  runAgent(): stream → run tools → feed back → loop
-    tools.ts                  write_file / read_file / list_files /
-                              str_replace_edit / delete_file /
-                              ask_questions / done
-    systemPrompt.ts           condensed Claude Design designer prompt
+  agent-main/             ← API-mode agent loop (runs in Electron main, Node)
+    run.ts                pi-agent-core loop + compaction + verify + done/screenshot
+    transport.ts          app model-config → pi-ai Model + streamFn (direct, no CORS)
+    designgen.ts          one-shot "design system from a URL/brief" (API path)
+    map.ts                app ⇆ pi-ai message bridging
+  agent/                  ← agent assets shared with the browser fallback
+    fullPrompt.ts         the bundled Claude Design prompt (claude_design_system_prompt.md)
+    systemPrompt.ts       project-context block
+    verify.ts             post-generation self-check (renders + reports problems)
   lib/
-    store.ts                  server-backed store (useSyncExternalStore) + FS ops
-    seed.ts, types.ts, format.ts, id.ts
-  pages/      Gallery.tsx · Workspace.tsx
-  components/ gallery/* · workspace/* · Logo.tsx
+    useAgentRunner.ts     run lifecycle: API vs CLI routing, ask-questions, CLI self-check
+    electronAgent.ts      renderer ⇆ main IPC client (per-run runId isolation)
+    designSystem.ts       design system → prompt block + token CSS + font <link>
+    designPresets.ts      built-in starter design systems
+    store.ts, types.ts, seed.ts, …
+  pages/         Gallery.tsx · Workspace.tsx
+  components/    gallery/* · workspace/*
+
+desktop/                  ← Rust sidecar (headless server)
+  src/main.rs             SQLite (rusqlite) /api, native PDF (PDFKit) /__pdf, static frontend
 ```
 
-### How the agent works
+The Electron main process launches the Rust binary in headless mode (`MDESIGN_HEADLESS=1`),
+reads the chosen port from its stderr, and points the renderer at it. The renderer talks to
+`/api` (state) and `/__pdf` (PDF text); the agent runs in **main** (Node — no browser CORS to
+the model gateway).
 
-1. The user sends a message. `runAgent` builds a `Context`
-   `{ systemPrompt, messages, tools }` and calls `stream(model, context)`.
-2. Events are normalized to one vocabulary (`text_delta`, `toolcall_end`,
-   `done`, …) regardless of provider, so the chat streams live.
-3. Each tool call runs against the project's **virtual file system** (the
-   localStorage-backed file list). `write_file` → the file shows up in *Design
-   Files* and opens in the preview.
-4. Tool results are appended and the loop repeats until the model stops asking
-   for tools (or calls `done`). Max 8 turns.
+---
 
-`ask_questions` is a **human-in-the-loop** tool: when the model calls it the run
-pauses, the chat renders an interactive option form (selectable chips + a
-free-text "Other"), and submitting the answers resumes the agent with the
-answers fed back as the tool result.
+## Agent modes
 
-### System prompt (optional full Claude Design prompt)
+### API mode
+`runAgent` (bundled from `src/agent-main`) runs the `pi-agent-core` loop in Node, streaming
+via `pi-ai`. Tools: `write_file`, `read_file`, `list_files`, `str_replace_edit`,
+`delete_file`, `ask_questions`, `done`. Context compaction kicks in for long chats; `done`
+triggers the self-check (`verify.ts`) and a screenshot for visual review.
 
-*Model settings → System prompt* toggles between:
+### CLI mode
+`cli-agent.cjs` drives a local coding CLI:
 
-- **Condensed** (default) — a lean designer prompt (`agent/systemPrompt.ts`).
-- **Full Claude Design** — the bundled `claude_design_system_prompt.md`, imported
-  at build time via `?raw` (`agent/fullPrompt.ts`). Only the **design guidance**
-  (~29KB / ~7k tokens) is injected; the file's trailing "In this environment…"
-  function-call XML mechanics + JSON tool-schema dump are stripped, since they
-  conflict with native tool calling, and replaced with a short note mapping to
-  this environment's real tools. On Anthropic the system block is sent with
-  `cache_control: ephemeral`, so the large prompt is only billed in full on the
-  first turn.
+| CLI | Invocation (fresh) | Resume |
+| --- | --- | --- |
+| codex | `codex exec --json -s workspace-write -C <dir>` | `codex exec resume <thread_id>` |
+| opencode | `opencode run --format json --dir <dir>` | `… -s <sessionID>` |
+| claude code | `claude -p … --output-format stream-json --permission-mode bypassPermissions` | `… --resume <session_id>` |
 
-### Dual protocol
+- **Per-project persistent working dir** (`<userData>/cli-workdirs/<projectId>/`): project
+  files are materialized there, the CLI edits them, changes sync back live.
+- **Capture-style session resume**: the session id is captured from the stream and reused on
+  the next turn, so follow-ups continue the same native session (no re-flattening the
+  transcript).
+- **Per-run `runId` isolation** so two projects in flight never cross-contaminate.
+- A **post-generation self-check** runs `verify.ts` on the deliverable and resumes the CLI to
+  fix any problems (bounded).
+- Per-CLI **proxy / model / reasoning / base-URL** are configurable in Settings.
 
-`stream()` dispatches on `model.api`:
+---
 
-| Provider    | Endpoint                         | Tool calling      |
-| ----------- | -------------------------------- | ----------------- |
-| `anthropic` | `POST /v1/messages` (SSE)        | `tool_use` blocks |
-| `openai`    | `POST /v1/chat/completions` (SSE)| `tool_calls`      |
-| `mock`      | in-process generator             | synthesized       |
+## Design systems
 
-Adapters convert the unified `Message[]` to each provider's wire format and back
-(including grouping Anthropic `tool_result` turns and OpenAI `role:"tool"`
-messages).
+A design system is a rich, agent-readable **`DESIGN.md`** spec (atmosphere, color & roles,
+type scale, components, spacing, elevation, do/don'ts, responsive, voice) plus token fields
+(colors, fonts, radius) that compile to a `:root` block + a Google-Fonts `<link>`.
 
-### CORS / endpoints
+- **Built-in presets:** Apple, 极简留白, 专业商务, 活力现代, 暗色科技.
+- **Generate from a URL or a one-line brief:** Settings → design systems → ✨ — Electron
+  crawls the site's computed styles (or the active CLI web-fetches it) and the model produces
+  a full system.
+- **Pick per project** from the composer (or follow the default / none).
+- **No brand pinned?** The agent still establishes one coherent system derived from the
+  user's clarifying-question answers and the brief, encoded as CSS variables and reused across
+  every page (distilled from Anthropic's *frontend-design* guidance).
 
-`vite.config.ts` proxies `/llm/anthropic/*` → `api.anthropic.com` and
-`/llm/openai/*` → `api.openai.com`, so the browser can stream from either
-without CORS issues in dev. To use any **OpenAI-compatible** endpoint directly
-(Ollama, vLLM, OpenRouter, a gateway), set a **Base URL** in *Model settings*.
+---
 
-## Default model (Volcengine Ark)
+## Configuration
 
-Out of the box the app is configured for **`ark-code-latest`** over the
-**Anthropic protocol** via Volcengine Ark, proxied through `/llm/ark`
-(`vite.config.ts`) so the browser avoids CORS. The API key is read from
-`.env.local` (`VITE_ARK_API_KEY`, gitignored) as the default; the system prompt
-defaults to **Full Claude Design**. Change any of this in *Model settings*
-(provider, model, key, base URL, prompt mode). Ark supports prompt caching, so
-the full prompt is only billed in full on the first turn.
+- **API mode model:** add a model config in the app (provider, model id, API key, base URL).
+  A default Ark/GLM key may be read from **`.env.local`** as `VITE_ARK_API_KEY`
+  (**gitignored** — never committed).
+- **CLI mode:** add a CLI agent (codex / opencode / claude) in Settings; it uses your local
+  login unless you set a base URL / key / proxy.
+- **Storage:** SQLite at `~/Library/Application Support/MDesign/app.db` (desktop) or
+  `data/app.db` (dev). Delete it to reset.
 
-## Persistence (server-side SQLite)
+---
 
-Everything (projects, files, chat history, settings) is stored **server-side** in
-SQLite at `data/app.db`, written by a small API that runs inside the Vite process
-(`server/apiPlugin.ts`, active in `npm run dev` and `vite preview`). No browser
-storage quota — large multi-file designs persist fine.
+## Packaging notes
 
-- `GET /api/state` — load everything; `PUT /api/projects/:id` — upsert one project
-  (per-project incremental write); `DELETE /api/projects/:id`; `PUT /api/meta` —
-  settings/user/tutorial.
-- `src/lib/store.ts` keeps an in-memory mirror, **debounces** saves (~500ms), and
-  bootstraps from the server on load (with a loading gate in `main.tsx`).
-- **One-time recovery:** if the DB is empty on first load, the store imports any
-  prior `localStorage['claude-design:v3'|v2|v1']` into the DB, then never touches
-  localStorage again. Delete unwanted projects from the gallery card menu.
-- `data/` is gitignored. Delete `data/app.db*` to reset to an empty gallery.
+`dist:mac` produces an **ad-hoc-signed** `.app`/`.dmg` (no Apple Developer cert). On another
+Mac the file is quarantined on transfer, so recipients open it once via **right-click → Open**,
+or clear the quarantine: `xattr -cr /Applications/MDesign.app`. Zero-warning distribution
+requires Developer ID signing + notarization.
