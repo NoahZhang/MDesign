@@ -1,0 +1,127 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .input {
+    @apply w-full rounded-lg border border-line bg-white px-3 py-2.5 text-[14px] text-ink placeholder:text-ink-faint focus:border-coral-muted focus:outline-none;
+  }
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    @apply bg-paper text-ink font-sans antialiased;
+    font-feature-settings: 'ss01', 'cv01';
+  }
+  * {
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+@layer utilities {
+  .wordmark {
+    font-family: 'Newsreader', Georgia, serif;
+    letter-spacing: -0.01em;
+  }
+  .status-dots::after {
+    content: '';
+    animation: status-dots 1.4s steps(1, end) infinite;
+  }
+  @keyframes status-dots {
+    0% {
+      content: '';
+    }
+    25% {
+      content: '·';
+    }
+    50% {
+      content: '··';
+    }
+    75% {
+      content: '···';
+    }
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .thin-scrollbar::-webkit-scrollbar {
+    width: 9px;
+    height: 9px;
+  }
+  .thin-scrollbar::-webkit-scrollbar-thumb {
+    background: #d9d5c8;
+    border-radius: 99px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+  .thin-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #c7c2b2;
+    background-clip: padding-box;
+  }
+}
+
+/* Markdown rendering inside chat bubbles */
+.md {
+  @apply text-[14.5px] leading-[1.62] text-ink-soft;
+}
+.md > * + * {
+  margin-top: 0.7em;
+}
+.md h1,
+.md h2,
+.md h3 {
+  @apply font-semibold text-ink;
+  line-height: 1.35;
+}
+.md h1 {
+  @apply text-[17px] mt-1;
+}
+.md h2 {
+  @apply text-[15.5px] mt-1;
+}
+.md h3 {
+  @apply text-[14.5px];
+}
+.md strong {
+  @apply font-semibold text-ink;
+}
+.md ul,
+.md ol {
+  @apply pl-5;
+}
+.md ul {
+  list-style: disc;
+}
+.md ol {
+  list-style: decimal;
+}
+.md li + li {
+  margin-top: 0.3em;
+}
+.md code {
+  @apply font-mono text-[12.5px] bg-sink rounded px-1 py-0.5 text-ink;
+}
+.md pre {
+  @apply bg-ink text-paper rounded-lg p-3 overflow-x-auto text-[12.5px];
+}
+.md pre code {
+  @apply bg-transparent text-paper p-0;
+}
+.md a {
+  @apply text-coral-dark underline underline-offset-2;
+}
+.md hr {
+  @apply border-line my-3;
+}
+.md blockquote {
+  @apply border-l-2 border-line pl-3 text-ink-muted;
+}

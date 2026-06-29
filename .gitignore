@@ -1,0 +1,20 @@
+node_modules
+dist
+dist-ssr
+data
+*.local
+.env
+.env.*
+!.env.example
+.DS_Store
+
+# build output
+electron-dist
+desktop/target
+
+# generated artifacts
+electron/agent.bundle.mjs
+*.tsbuildinfo
+
+# claude code local settings
+.claude/settings.local.json
