@@ -8,21 +8,36 @@ const quoteFont = (f: string): string => {
   return (/\s/.test(name) ? `"${name}"` : name) + ', sans-serif'
 }
 
-// Fonts that ship with the OS (or aren't on Google Fonts) — don't request them.
-const SYSTEM_FONT = /^(SF |-apple-system|system-ui|ui-|BlinkMac|Helvetica|Arial|Segoe|Menlo|Monaco|Courier|Times|Georgia)/i
+// Fonts that ship with the OS or aren't on Google Fonts — don't request them. SF families
+// have variable suffixes (prefix match); the rest match the whole name so a real Google
+// font like "Courier Prime" isn't skipped as "Courier".
+function isSystemFont(f: string): boolean {
+  return (
+    /^SF (Pro|Compact|Mono)/i.test(f) ||
+    /^(-apple-system|system-ui|BlinkMacSystemFont|ui-[\w-]+)$/i.test(f) ||
+    /^(Helvetica( Neue)?|Arial|Segoe UI|Menlo|Monaco|Consolas|Courier New|Courier|Times( New Roman)?|Times|Georgia)$/i.test(f)
+  )
+}
 
-/** A Google Fonts <link> for the system's fonts, so they actually load (or '' if none). */
+/**
+ * Google Fonts <link>s for the system's fonts, so they actually load (or '' if none).
+ * One <link> PER family (a css2 request 400s wholesale if any listed weight is missing,
+ * so isolating families means one bad font doesn't take the others down with it).
+ */
 export function googleFontsLink(ds: DesignSystem): string {
   const fams = [...new Set([ds.headingFont, ds.bodyFont].map((f) => (f || '').trim()).filter(Boolean))].filter(
-    (f) => !SYSTEM_FONT.test(f),
+    (f) => !isSystemFont(f),
   )
   if (!fams.length) return ''
-  const q = fams.map((f) => 'family=' + encodeURIComponent(f).replace(/%20/g, '+') + ':wght@300;400;500;600;700').join('&')
-  return (
-    '<link rel="preconnect" href="https://fonts.googleapis.com">\n' +
-    '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n' +
-    `<link href="https://fonts.googleapis.com/css2?${q}&display=swap" rel="stylesheet">`
-  )
+  const links = [
+    '<link rel="preconnect" href="https://fonts.googleapis.com">',
+    '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>',
+  ]
+  for (const f of fams) {
+    const fam = encodeURIComponent(f).replace(/%20/g, '+')
+    links.push(`<link href="https://fonts.googleapis.com/css2?family=${fam}:wght@400;500;600;700&display=swap" rel="stylesheet">`)
+  }
+  return links.join('\n')
 }
 
 /** Compiled :root token block (colors + fonts + radius) the agent pastes into each page's <style>. */
@@ -63,7 +78,15 @@ No brand is pinned, so YOU define the visual system. Do NOT pick it arbitrarily 
  * derive a fitting design system from the brief and carry it through (shared CSS vars).
  */
 export function designSystemPrompt(ds: DesignSystem | null | undefined): string {
-  if (!ds) return SELF_DIRECTED_DESIGN
+  // A present-but-empty system (blank editor, or a generation that yielded nothing) has no
+  // brand to enforce — fall back to the self-directed directive rather than an empty contract.
+  const hasContent =
+    !!ds &&
+    (ds.colors.some((c) => c.value && c.value.trim()) ||
+      !!ds.headingFont?.trim() ||
+      !!ds.bodyFont?.trim() ||
+      !!ds.spec?.trim())
+  if (!ds || !hasContent) return SELF_DIRECTED_DESIGN
   const colors = ds.colors.filter((c) => c.value && c.value.trim())
   const out: string[] = [
     '',

@@ -210,7 +210,11 @@ export async function runAgent(args: RunArgs): Promise<void> {
         acc += estimateTokens(msgs[i])
         if (acc >= cs.keepRecentTokens) { cut = i; break }
       }
-      while (cut < msgs.length && (msgs[cut] as PiMessage).role !== 'user') cut++
+      // Advance to a clean boundary: don't start the recent tail on a toolResult (that
+      // would orphan it from its tool call). A build has only one user message, so
+      // requiring role==='user' here made compaction never fire; assistant boundaries
+      // are valid cut points.
+      while (cut < msgs.length && (msgs[cut] as PiMessage).role === 'toolResult') cut++
       const older = msgs.slice(0, cut)
       const recent = msgs.slice(cut)
       if (older.length < 2 || recent.length === 0) return msgs

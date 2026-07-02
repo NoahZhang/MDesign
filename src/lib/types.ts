@@ -35,6 +35,8 @@ export interface ModelConfig {
   /** Optional base URL override (e.g. an OpenAI-compatible gateway / Ark). */
   baseUrl: string
   apiKey: string
+  /** Max output tokens per request (optional; transport uses a safe default if unset). */
+  maxTokens?: number
 }
 
 /** A local coding-CLI agent (codex / opencode), run as a child process (CLI mode). */

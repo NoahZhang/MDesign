@@ -296,20 +296,40 @@ async function runCliAgent({ cfg, prompt, brief, designSystem, baseMessages, fil
       await fsp.mkdir(path.dirname(fp), { recursive: true })
       await fsp.writeFile(fp, f.content ?? '')
     }
+    // Prune stale files (deleted/renamed in the store since a prior run) so the persistent
+    // workdir doesn't resurrect them on sync-back. readDirFiles skips dotfiles, so the
+    // session file / .mdesign dir survive; keep AGENTS.md (managed just below).
+    try {
+      for (const f of await readDirFiles(dir)) {
+        if (!original.has(f.path) && f.path !== 'AGENTS.md') {
+          await fsp.rm(path.join(dir, f.path), { force: true }).catch(() => {})
+        }
+      }
+    } catch {
+      /* ignore */
+    }
 
-    // Inject the MDesign design guidance as AGENTS.md (codex/opencode auto-read it).
+    // Inject the MDesign design guidance for the CLI. Prefer AGENTS.md (auto-read), but
+    // never clobber a user's own AGENTS.md — fall back to a dot-dir file the prompt points at.
     const injected = new Set()
+    let briefPath = 'AGENTS.md'
     if (brief && brief.trim()) {
-      if (!original.has('AGENTS.md')) injected.add('AGENTS.md')
-      await fsp.writeFile(path.join(dir, 'AGENTS.md'), brief)
+      if (original.has('AGENTS.md')) {
+        await fsp.mkdir(path.join(dir, '.mdesign'), { recursive: true })
+        await fsp.writeFile(path.join(dir, '.mdesign', 'BRIEF.md'), brief)
+        briefPath = '.mdesign/BRIEF.md' // dot-dir → skipped by readDirFiles, never synced back
+      } else {
+        injected.add('AGENTS.md')
+        await fsp.writeFile(path.join(dir, 'AGENTS.md'), brief)
+      }
     }
     // The active design system is what the user toggles per-run; inject it into the
-    // prompt EVERY turn (not just AGENTS.md) so even a resumed session applies it.
+    // prompt EVERY turn (not just the brief file) so even a resumed session applies it.
     const dsBlock = designSystem && designSystem.trim() ? designSystem.trim() + '\n\n' : ''
     const freshPrompt =
       dsBlock +
       (brief && brief.trim()
-        ? '请先阅读并严格遵循项目根目录的 AGENTS.md(设计规范与本项目要求),以及上面的 Active design system(若有)。\n' +
+        ? `请先阅读并严格遵循项目根目录的 ${briefPath}(设计规范与本项目要求),以及上面的 Active design system(若有)。\n` +
           '【务必一次做完】不要只汇报计划或中途进度("接下来我会…")就结束回复。请持续工作,直到所有需要的文件都已创建并写完、成品完整可用,然后才结束本次运行。除非需要向用户澄清(见下),否则不要在任务未完成时停下。\n' +
           '【重要·提问格式】若需先澄清需求,**不要用普通文字罗列问题**——必须只输出一个 ```ask 代码块(JSON:{"questions":[{"id":"snake_case","title":"问题","kind":"text-options","options":["选项1","选项2","选项3"],"multi":false}]},每题给 3-5 个具体可选项),输出后立即停止、不要创建文件。\n\n' +
           prompt
@@ -466,7 +486,10 @@ async function runCliAgent({ cfg, prompt, brief, designSystem, baseMessages, fil
 
     // Resume the stored session; if resume fails hard (e.g. expired), retry fresh.
     let result = await attempt(resumeId)
-    const failedHard = (r) => r.code !== 0 && !r.assistantText && r.toolBlocks.length === 0 && r.synced.length === 0
+    // A hard failure = exited non-zero with no output at all (e.g. an expired resume
+    // session). NOT gated on synced files — those were just materialized, so they're
+    // always present and would wrongly suppress the fresh-retry.
+    const failedHard = (r) => r.code !== 0 && !r.assistantText && r.toolBlocks.length === 0
     if (resumeId && failedHard(result) && !signal?.aborted) {
       try {
         await fsp.rm(sessionFile, { force: true })
@@ -485,6 +508,9 @@ async function runCliAgent({ cfg, prompt, brief, designSystem, baseMessages, fil
     }
 
     const { code, assistantText, toolBlocks, synced, stderr } = result
+    // Did the CLI actually create a new file this run? (synced always includes the
+    // materialized project files, so its non-emptiness can't tell "built" from "just asked".)
+    const createdNew = synced.some((f) => !original.has(f.path))
     const emitFinal = (text) => {
       const content = []
       if (text) content.push({ type: 'text', text })
@@ -495,7 +521,7 @@ async function runCliAgent({ cfg, prompt, brief, designSystem, baseMessages, fil
     // ```ask block → the same selectable form API mode uses (synthetic tool call +
     // sentinel). Fallback: the CLI asked in prose → a quick read-only pass structures it.
     let ask = parseAskBlock(assistantText)
-    if (!ask && synced.length === 0 && assistantText.length > 10 && /[?？]/.test(assistantText) && !signal?.aborted) {
+    if (!ask && !createdNew && assistantText.length > 10 && /[?？]/.test(assistantText) && !signal?.aborted) {
       try {
         emit.status({ kind: 'running', label: '整理问题…' })
         const structPrompt =
@@ -504,7 +530,9 @@ async function runCliAgent({ cfg, prompt, brief, designSystem, baseMessages, fil
         const structArgs =
           cfg.kind === 'codex'
             ? ['exec', '--json', '--skip-git-repo-check', '-s', 'read-only', '-C', dir, structPrompt]
-            : ['run', '--format', 'json', '--dir', dir, structPrompt]
+            : cfg.kind === 'claude'
+              ? ['-p', structPrompt, '--output-format', 'stream-json', '--verbose', '--permission-mode', 'bypassPermissions', '--add-dir', dir]
+              : ['run', '--format', 'json', '--dir', dir, structPrompt]
         const structText = await runCollect(resolved, structArgs, env, dir, adapter, signal)
         const s = parseAskBlock(structText)
         if (s) ask = { spec: s.spec, stripped: assistantText }

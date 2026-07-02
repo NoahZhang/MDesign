@@ -186,6 +186,12 @@ export function useAgentRunner(project: Project, onSelectFile: (path: string) =>
               res.problems.map((p) => '- ' + p).join('\n')
             await runCli(fixPrompt, proj?.messages ?? [])
           }
+
+          // Open the deliverable in the preview (CLI mode has no selectFile event).
+          if (!ac.signal.aborted) {
+            const deliverable = pickDeliverable(getState().projects.find((x) => x.id === project.id)?.files ?? [])
+            if (deliverable) onSelectFile(deliverable)
+          }
         } finally {
           setRunning(false)
           setStatus(null)
@@ -224,7 +230,7 @@ export function useAgentRunner(project: Project, onSelectFile: (path: string) =>
         // native pi-ai). The browser path stays as a fallback (web/dev outside Electron).
         if (isElectron()) {
           await runAgentViaIpc({
-            project,
+            project: liveProject, // live files, not the stale useCallback closure
             settings,
             systemPrompt,
             baseMessages: base,
