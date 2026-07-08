@@ -5,6 +5,8 @@ it as **real, runnable UI** — prototypes, pages, components, slide decks — r
 preview beside the chat. It's inspired by the Claude Design workflow: you talk to a designer,
 it produces actual product screens (not documents about the product), and you iterate.
 
+![MDesign — the gallery: create a project, manage design systems and models, then open it into the chat + live-preview workspace](docs/screenshot.png)
+
 The app is a macOS desktop application built on Electron, with a small Rust helper for storage
 and PDF handling. The agent that does the work can run in two different ways depending on how
 you want it powered.
