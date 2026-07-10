@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { ChevronLeft, Code2, Copy, Check, ExternalLink, Eye } from 'lucide-react'
 import { relTime } from '../../lib/format'
 import { fileKind } from '../../lib/types'
+import { useT } from '../../lib/i18n'
 import { resolveHtml } from '../../lib/resolveHtml'
 import { isDeckHtml } from '../../lib/deckHtml'
 import { usePreviewNav } from '../../lib/usePreviewNav'
@@ -14,14 +15,15 @@ function fmtSize(n: number): string {
   return `${(n / 1024 / 1024).toFixed(1)} MB`
 }
 
-const TYPE_LABEL: Record<string, string> = {
-  page: 'HTML page',
-  component: 'Component',
-  asset: 'Asset',
-  doc: 'Document',
+const TYPE_LABEL_KEY: Record<string, string> = {
+  page: 'preview.type_page',
+  component: 'preview.type_component',
+  asset: 'preview.type_asset',
+  doc: 'preview.type_doc',
 }
 
 export default function FilePreview({ project, selected }: { project: Project; selected: string | null }) {
+  const t = useT()
   const file = selected ? project.files.find((f) => f.path === selected) : undefined
   const kind = file ? fileKind(file.path) : 'doc'
   const [mode, setMode] = useState<'preview' | 'code'>('preview')
@@ -36,7 +38,7 @@ export default function FilePreview({ project, selected }: { project: Project; s
   if (!file) {
     return (
       <div className="grid h-full place-items-center bg-paper">
-        <p className="text-[14px] text-ink-faint">Select a file to preview</p>
+        <p className="text-[14px] text-ink-faint">{t('preview.select_file')}</p>
       </div>
     )
   }
@@ -85,9 +87,9 @@ export default function FilePreview({ project, selected }: { project: Project; s
                   <button
                     onClick={nav.back}
                     className="absolute left-2 top-2 z-10 flex items-center gap-1 rounded-md border border-line bg-white/90 px-2 py-1 text-[12px] font-medium text-ink shadow-card backdrop-blur hover:bg-white"
-                    title="返回"
+                    title={t('preview.back')}
                   >
-                    <ChevronLeft size={13} /> 返回
+                    <ChevronLeft size={13} /> {t('preview.back')}
                   </button>
                 )}
                 <iframe
@@ -110,7 +112,7 @@ export default function FilePreview({ project, selected }: { project: Project; s
               </div>
             ) : (
               <pre className="thin-scrollbar h-full overflow-auto bg-[#1F1E1B] p-5 font-mono text-[12px] leading-relaxed text-[#EDEAE0]">
-                <code>{file.content || '(empty file)'}</code>
+                <code>{file.content || t('preview.empty_file')}</code>
               </pre>
             )}
           </div>
@@ -122,7 +124,7 @@ export default function FilePreview({ project, selected }: { project: Project; s
               className="flex items-center gap-2 rounded-lg border border-line bg-white px-4 py-2 text-[13.5px] font-medium text-ink shadow-card transition-colors hover:bg-panel"
             >
               <ExternalLink size={15} />
-              Open
+              {t('preview.open')}
             </button>
             {isHtml && (
               <div className="flex rounded-lg border border-line bg-white p-0.5">
@@ -133,7 +135,7 @@ export default function FilePreview({ project, selected }: { project: Project; s
                     (mode === 'preview' ? 'bg-sink font-medium text-ink' : 'text-ink-muted hover:text-ink')
                   }
                 >
-                  <Eye size={13} /> Preview
+                  <Eye size={13} /> {t('preview.preview')}
                 </button>
                 <button
                   onClick={() => setMode('code')}
@@ -142,14 +144,14 @@ export default function FilePreview({ project, selected }: { project: Project; s
                     (showCode ? 'bg-sink font-medium text-ink' : 'text-ink-muted hover:text-ink')
                   }
                 >
-                  <Code2 size={13} /> Code
+                  <Code2 size={13} /> {t('preview.code')}
                 </button>
               </div>
             )}
             <button
               onClick={copy}
               className="grid h-9 w-9 place-items-center rounded-lg border border-line bg-white text-ink-muted transition-colors hover:bg-panel"
-              title="Copy contents"
+              title={t('preview.copy')}
             >
               {copied ? <Check size={15} className="text-coral-dark" /> : <Copy size={15} />}
             </button>
@@ -158,9 +160,9 @@ export default function FilePreview({ project, selected }: { project: Project; s
           {/* metadata */}
           <div className="mt-5 text-center">
             <div className="text-[16px] font-semibold text-ink">{file.path.split('/').pop()}</div>
-            <div className="mt-0.5 text-[13px] text-ink-muted">{TYPE_LABEL[kind] ?? 'File'}</div>
+            <div className="mt-0.5 text-[13px] text-ink-muted">{t(TYPE_LABEL_KEY[kind] ?? 'preview.type_file')}</div>
             <div className="mt-1.5 text-[12px] text-ink-faint">
-              Modified {relTime(file.updatedAt)} · {size} · {ext}
+              {t('preview.modified', { time: relTime(file.updatedAt), size, ext })}
             </div>
           </div>
         </div>

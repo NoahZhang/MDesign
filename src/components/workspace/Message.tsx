@@ -3,6 +3,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Eye, FileText, FolderOpen, Pencil, ThumbsDown, ThumbsUp, Trash2, Wrench } from 'lucide-react'
 import { PDF_MARK, pdfBlockLabel } from '../../lib/pdfText'
+import { useT } from '../../lib/i18n'
 import type { ContentBlock, Message as Msg, ToolCallBlock } from '../../pi-ai'
 
 // Render markdown links so they never navigate the SPA away (a relative href like
@@ -23,13 +24,13 @@ function MdLink({ href, children }: { href?: string; children?: ReactNode }) {
   )
 }
 
-const TOOL_META: Record<string, { icon: typeof Pencil; label: string }> = {
-  write_file: { icon: Pencil, label: 'Wrote' },
-  str_replace_edit: { icon: Pencil, label: 'Edited' },
-  read_file: { icon: FolderOpen, label: 'Read' },
-  list_files: { icon: FolderOpen, label: 'Listed' },
-  delete_file: { icon: Trash2, label: 'Deleted' },
-  done: { icon: Eye, label: 'Opened' },
+const TOOL_META: Record<string, { icon: typeof Pencil; labelKey: string }> = {
+  write_file: { icon: Pencil, labelKey: 'message.tool_wrote' },
+  str_replace_edit: { icon: Pencil, labelKey: 'message.tool_edited' },
+  read_file: { icon: FolderOpen, labelKey: 'message.tool_read' },
+  list_files: { icon: FolderOpen, labelKey: 'message.tool_listed' },
+  delete_file: { icon: Trash2, labelKey: 'message.tool_deleted' },
+  done: { icon: Eye, labelKey: 'message.tool_opened' },
 }
 
 function filePathOf(call: ToolCallBlock): string {
@@ -43,31 +44,33 @@ function filePathOf(call: ToolCallBlock): string {
 // calls into "name ×N" (a CLI run can emit dozens of read/edit/bash). A single call
 // with a real file path stays clickable (opens it); merged/CLI pills are just labels.
 function ToolPills({ tools, onOpen }: { tools: ToolCallBlock[]; onOpen?: (p: string) => void }) {
+  const t = useT()
   const groups: { name: string; calls: ToolCallBlock[] }[] = []
-  for (const t of tools) {
+  for (const tc of tools) {
     const last = groups[groups.length - 1]
-    if (last && last.name === t.name) last.calls.push(t)
-    else groups.push({ name: t.name, calls: [t] })
+    if (last && last.name === tc.name) last.calls.push(tc)
+    else groups.push({ name: tc.name, calls: [tc] })
   }
   return (
     <div className="flex flex-wrap gap-1.5">
       {groups.map((g) => {
-        const m = TOOL_META[g.name] ?? { icon: Wrench, label: g.name }
-        const Icon = m.icon
+        const meta = TOOL_META[g.name]
+        const Icon = meta?.icon ?? Wrench
+        const label = meta ? t(meta.labelKey) : g.name
         const path = g.calls.length === 1 ? filePathOf(g.calls[0]) : ''
         const clickable = !!path
         return (
           <button
             key={g.calls[0].id}
             onClick={() => clickable && onOpen?.(path)}
-            title={path || m.label}
+            title={path || label}
             className={
               'inline-flex max-w-full items-center gap-1 rounded-md border border-line bg-panel px-2 py-1 text-[12px] text-ink-soft transition-colors ' +
               (clickable ? 'cursor-pointer hover:border-line-strong hover:bg-white' : 'cursor-default')
             }
           >
             <Icon size={12} className="shrink-0 text-coral-dark" />
-            <span className="font-medium">{m.label}</span>
+            <span className="font-medium">{label}</span>
             {g.calls.length > 1 && <span className="text-ink-faint">×{g.calls.length}</span>}
             {path && <span className="truncate font-mono text-[11px] text-ink-muted">{path}</span>}
           </button>
@@ -86,6 +89,7 @@ export default function MessageView({
   onOpenFile?: (p: string) => void
   streaming?: boolean
 }) {
+  const t = useT()
   const [vote, setVote] = useState<'up' | 'down' | null>(null)
   if (message.role === 'toolResult') {
     // Surface the user's answers to a question form as a user-style bubble.
@@ -119,7 +123,7 @@ export default function MessageView({
                 <img
                   key={i}
                   src={`data:${im.mimeType};base64,${im.data}`}
-                  alt="attachment"
+                  alt={t('message.attachment_alt')}
                   className="max-h-40 rounded-lg border border-line/60 object-cover"
                 />
               ))}

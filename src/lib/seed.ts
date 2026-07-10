@@ -73,6 +73,7 @@ export function migrateSettings(raw: unknown): Settings {
       activeId,
       promptMode: 'full',
       verify: s.verify !== false,
+      lang: s.lang === 'en' || s.lang === 'zh' ? s.lang : undefined,
       ...migrateCli(s),
     }
   }
@@ -91,6 +92,7 @@ export function migrateSettings(raw: unknown): Settings {
       activeId: cfg.id,
       promptMode: 'full',
       verify: s.verify !== false,
+      lang: s.lang === 'en' || s.lang === 'zh' ? s.lang : undefined,
       ...migrateCli(s),
     }
   }

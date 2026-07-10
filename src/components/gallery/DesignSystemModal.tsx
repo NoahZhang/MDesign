@@ -7,6 +7,7 @@ import { uid } from '../../lib/id'
 import { confirmDialog, alertDialog } from '../../lib/dialog'
 import { generateDesignSystemViaIpc, isElectron } from '../../lib/electronAgent'
 import { activeCli, activeModel, type DesignSystem } from '../../lib/types'
+import { useT } from '../../lib/i18n'
 
 function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
@@ -29,6 +30,7 @@ export function Palette({ ds, size = 5 }: { ds: DesignSystem; size?: number }) {
 }
 
 function Editor({ initial, onDone }: { initial: DesignSystem; onDone: () => void }) {
+  const t = useT()
   const [draft, setDraft] = useState<DesignSystem>(initial)
   const patch = (p: Partial<DesignSystem>) => setDraft((d) => ({ ...d, ...p }))
 
@@ -36,17 +38,17 @@ function Editor({ initial, onDone }: { initial: DesignSystem; onDone: () => void
     patch({ colors: draft.colors.map((c, idx) => (idx === i ? { ...c, [k]: v } : c)) })
 
   const save = () => {
-    upsertDesignSystem({ ...draft, name: draft.name.trim() || '未命名设计系统' })
+    upsertDesignSystem({ ...draft, name: draft.name.trim() || t('ds.untitled_system') })
     onDone()
   }
 
   return (
     <div className="mt-4 space-y-4">
-      <Field label="名称">
-        <input value={draft.name} onChange={(e) => patch({ name: e.target.value })} placeholder="例如 Acme Brand" className="input" />
+      <Field label={t('ds.name_label')}>
+        <input value={draft.name} onChange={(e) => patch({ name: e.target.value })} placeholder={t('ds.name_placeholder')} className="input" />
       </Field>
 
-      <Field label="配色" hint="给每个颜色起个名字(会变成 CSS 变量,如 --primary)。">
+      <Field label={t('ds.colors_label')} hint={t('ds.colors_hint')}>
         <div className="space-y-2">
           {draft.colors.map((c, i) => (
             <div key={i} className="flex items-center gap-2">
@@ -70,27 +72,27 @@ function Editor({ initial, onDone }: { initial: DesignSystem; onDone: () => void
             onClick={() => patch({ colors: [...draft.colors, { name: '', value: '#D97757' }] })}
             className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-line py-2 text-[13px] font-medium text-ink-soft hover:bg-white"
           >
-            <Plus size={15} /> 添加颜色
+            <Plus size={15} /> {t('ds.add_color')}
           </button>
         </div>
       </Field>
 
       <div className="grid grid-cols-2 gap-3">
-        <Field label="标题字体">
+        <Field label={t('ds.heading_font')}>
           <input value={draft.headingFont} onChange={(e) => patch({ headingFont: e.target.value })} placeholder="Inter" className="input" />
         </Field>
-        <Field label="正文字体">
+        <Field label={t('ds.body_font')}>
           <input value={draft.bodyFont} onChange={(e) => patch({ bodyFont: e.target.value })} placeholder="Inter" className="input" />
         </Field>
       </div>
 
-      <Field label={`圆角 — ${draft.radius}px`}>
+      <Field label={t('ds.radius_label', { n: draft.radius })}>
         <input type="range" min={0} max={32} value={draft.radius} onChange={(e) => patch({ radius: Number(e.target.value) })} className="w-full accent-coral" />
       </Field>
 
       <Field
-        label="设计规范 (DESIGN.md)"
-        hint="设计系统的核心——氛围、字号阶、组件、间距、阴影、Do/Don't、语气。会作为品牌契约原样给到 agent。颜色/字体/圆角只是它的机器可读摘要。"
+        label={t('ds.spec_label')}
+        hint={t('ds.spec_hint')}
       >
         <div className="mb-1.5 flex">
           <button
@@ -98,24 +100,24 @@ function Editor({ initial, onDone }: { initial: DesignSystem; onDone: () => void
             onClick={() => patch({ spec: draft.spec.trim() ? draft.spec : SPEC_TEMPLATE })}
             className="ml-auto rounded-md border border-line bg-white px-2 py-1 text-[11.5px] font-medium text-ink-soft hover:bg-panel"
           >
-            插入 9 段模板
+            {t('ds.insert_template')}
           </button>
         </div>
         <textarea
           value={draft.spec}
           onChange={(e) => patch({ spec: e.target.value })}
           rows={14}
-          placeholder={'## Atmosphere & visual theme\n安静、克制、留白充足……\n\n## Typography\nH1 32/1.2 w600 · Body 16/1.6 w400……'}
+          placeholder={t('ds.spec_placeholder')}
           className="input resize-none font-mono text-[12px] leading-relaxed"
         />
       </Field>
 
       <div className="flex gap-2 pt-1">
         <button onClick={onDone} className="rounded-lg px-3 py-2 text-[13.5px] text-ink-muted hover:bg-sink">
-          取消
+          {t('common.cancel')}
         </button>
         <button onClick={save} className="ml-auto rounded-lg bg-ink px-4 py-2 text-[13.5px] font-medium text-white hover:bg-ink-soft">
-          保存
+          {t('common.save')}
         </button>
       </div>
     </div>
@@ -123,6 +125,7 @@ function Editor({ initial, onDone }: { initial: DesignSystem; onDone: () => void
 }
 
 export default function DesignSystemModal({ onClose }: { onClose: () => void }) {
+  const t = useT()
   const { systems, defaultId } = useDesignSystems()
   const settings = useSettings()
   const [editing, setEditing] = useState<DesignSystem | null>(null)
@@ -136,11 +139,11 @@ export default function DesignSystemModal({ onClose }: { onClose: () => void }) 
     const cfg = activeCli(settings)
     const model = activeModel(settings)
     if (cliMode && !cfg) {
-      alertDialog('当前是 CLI 模式,但还没有可用的 CLI agent。请在「模型配置」里添加 codex / opencode,或切回 API 模型。')
+      alertDialog(t('ds.err_no_cli'))
       return
     }
     if (!cliMode && (!model || !model.model?.trim() || !model.apiKey?.trim())) {
-      alertDialog('请先在「模型配置」里设置一个可用的 API 模型,或切到 CLI(opencode/codex)——生成设计系统需要一个可用的 agent。')
+      alertDialog(t('ds.err_no_model'))
       return
     }
     const looksUrl = /^https?:\/\//i.test(q) || /^[\w-]+(\.[\w-]+)+(\/|$)/.test(q)
@@ -162,7 +165,7 @@ export default function DesignSystemModal({ onClose }: { onClose: () => void }) 
       })
       setGenInput('')
     } catch (e) {
-      alertDialog('生成失败:' + (e instanceof Error ? e.message : String(e)))
+      alertDialog(t('ds.gen_failed', { msg: e instanceof Error ? e.message : String(e) }))
     } finally {
       setGenLoading(false)
     }
@@ -175,7 +178,7 @@ export default function DesignSystemModal({ onClose }: { onClose: () => void }) 
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
-          <h2 className="text-[17px] font-semibold text-ink">设计系统</h2>
+          <h2 className="text-[17px] font-semibold text-ink">{t('ds.title')}</h2>
           <button onClick={onClose} className="grid h-8 w-8 place-items-center rounded-md text-ink-muted hover:bg-sink">
             <X size={17} />
           </button>
@@ -186,13 +189,15 @@ export default function DesignSystemModal({ onClose }: { onClose: () => void }) 
         ) : (
           <>
             <p className="mt-1 text-[13px] leading-relaxed text-ink-muted">
-              可以建多套品牌。标 ★ 的是<b>默认</b>——新项目和未单独指定的项目都用它;每个项目也可以在工作区里单独选用某一套或不用。
+              {t('ds.intro_a')}
+              <b>{t('ds.default')}</b>
+              {t('ds.intro_b')}
             </p>
 
             {isElectron() && (
               <div className="mt-4 rounded-xl border border-coral-muted/60 bg-coral-tint/30 p-3">
                 <div className="mb-1.5 flex items-center gap-1.5 text-[12.5px] font-medium text-ink-soft">
-                  <Sparkles size={14} className="text-coral-dark" /> 从网址或描述自动生成
+                  <Sparkles size={14} className="text-coral-dark" /> {t('ds.autogen_title')}
                 </div>
                 <div className="flex gap-2">
                   <input
@@ -205,7 +210,7 @@ export default function DesignSystemModal({ onClose }: { onClose: () => void }) 
                       }
                     }}
                     disabled={genLoading}
-                    placeholder="粘贴网址(如 stripe.com)或描述(如 暗色科技风)…"
+                    placeholder={t('ds.gen_placeholder')}
                     className="input flex-1 disabled:opacity-60"
                   />
                   <button
@@ -213,11 +218,11 @@ export default function DesignSystemModal({ onClose }: { onClose: () => void }) 
                     disabled={genLoading || !genInput.trim()}
                     className="shrink-0 rounded-lg bg-ink px-3.5 py-2 text-[13px] font-medium text-white hover:bg-ink-soft disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    {genLoading ? '生成中…' : '生成'}
+                    {genLoading ? t('ds.generating') : t('ds.generate')}
                   </button>
                 </div>
                 <p className="mt-1.5 text-[11px] leading-snug text-ink-faint">
-                  会读取网址真实的配色 / 字体 / 圆角,并让模型产出一套完整设计系统(含 DESIGN.md);生成后可再编辑。
+                  {t('ds.gen_hint')}
                 </p>
               </div>
             )}
@@ -230,14 +235,14 @@ export default function DesignSystemModal({ onClose }: { onClose: () => void }) 
                     <button
                       onClick={() => setDefaultDesignSystem(isDefault ? '' : s.id)}
                       className={'grid h-7 w-7 shrink-0 place-items-center rounded-md ' + (isDefault ? 'text-coral-dark' : 'text-ink-faint hover:text-ink')}
-                      title={isDefault ? '取消默认' : '设为默认'}
+                      title={isDefault ? t('ds.unset_default') : t('ds.set_default')}
                     >
                       <Star size={16} fill={isDefault ? 'currentColor' : 'none'} />
                     </button>
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-[14px] font-medium text-ink">
-                        {s.name || '未命名'}
-                        {isDefault && <span className="ml-2 rounded-full bg-coral-tint px-1.5 py-0.5 text-[10.5px] font-medium text-coral-dark">默认</span>}
+                        {s.name || t('ds.untitled')}
+                        {isDefault && <span className="ml-2 rounded-full bg-coral-tint px-1.5 py-0.5 text-[10.5px] font-medium text-coral-dark">{t('ds.default')}</span>}
                       </div>
                       <div className="mt-1 flex items-center gap-2">
                         <Palette ds={s} size={4} />
@@ -246,15 +251,15 @@ export default function DesignSystemModal({ onClose }: { onClose: () => void }) 
                         )}
                       </div>
                     </div>
-                    <button onClick={() => setEditing(s)} className="grid h-7 w-7 place-items-center rounded-md text-ink-muted hover:bg-sink" title="编辑">
+                    <button onClick={() => setEditing(s)} className="grid h-7 w-7 place-items-center rounded-md text-ink-muted hover:bg-sink" title={t('common.edit')}>
                       <Pencil size={14} />
                     </button>
                     <button
                       onClick={async () => {
-                        if (await confirmDialog(`删除设计系统「${s.name || '未命名'}」？`)) deleteDesignSystem(s.id)
+                        if (await confirmDialog(t('ds.delete_confirm', { name: s.name || t('ds.untitled') }))) deleteDesignSystem(s.id)
                       }}
                       className="grid h-7 w-7 place-items-center rounded-md text-ink-muted hover:bg-coral-tint hover:text-coral-dark"
-                      title="删除"
+                      title={t('common.delete')}
                     >
                       <Trash2 size={14} />
                     </button>
@@ -263,7 +268,7 @@ export default function DesignSystemModal({ onClose }: { onClose: () => void }) 
               })}
               {systems.length === 0 && (
                 <div className="rounded-lg border border-dashed border-line px-4 py-6 text-center text-[13px] text-ink-muted">
-                  还没有设计系统,点下面创建一套。
+                  {t('ds.empty')}
                 </div>
               )}
             </div>
@@ -272,17 +277,17 @@ export default function DesignSystemModal({ onClose }: { onClose: () => void }) 
               onClick={() => setEditing(blankDesignSystem())}
               className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg border border-line bg-white py-2.5 text-[13.5px] font-medium text-ink-soft hover:bg-panel"
             >
-              <Plus size={16} /> 新建设计系统
+              <Plus size={16} /> {t('ds.new')}
             </button>
 
-            <div className="mt-4 text-[11.5px] font-medium text-ink-faint">或从预置开始(会复制一份,可再编辑)</div>
+            <div className="mt-4 text-[11.5px] font-medium text-ink-faint">{t('ds.presets_label')}</div>
             <div className="mt-1.5 flex flex-wrap gap-2">
               {designPresets().map((p) => (
                 <button
                   key={p.id}
                   onClick={() => setEditing({ ...p, id: uid('ds') })}
                   className="flex items-center gap-2 rounded-lg border border-line bg-white px-3 py-2 text-[12.5px] text-ink-soft hover:bg-panel"
-                  title={`从「${p.name}」预置开始`}
+                  title={t('ds.preset_title', { name: p.name })}
                 >
                   <Palette ds={p} size={3} />
                   {p.name}

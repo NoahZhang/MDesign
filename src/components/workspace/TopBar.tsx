@@ -9,6 +9,7 @@ import { usePreviewNav } from '../../lib/usePreviewNav'
 import { exportStandalone, exportZip } from '../../lib/exportProject'
 import { exportHtmlToPptx } from '../../lib/htmlToPptx'
 import { alertDialog, confirmDialog, promptDialog } from '../../lib/dialog'
+import { useT } from '../../lib/i18n'
 import DeckView from './DeckView'
 import type { Project } from '../../lib/types'
 
@@ -98,6 +99,7 @@ export default function TopBar({
   tabs: TabsProps
 }) {
   const navigate = useNavigate()
+  const t = useT()
   const user = useStore((s) => s.user)
   const dss = useDesignSystems()
   const [menu, setMenu] = useState(false)
@@ -138,7 +140,7 @@ export default function TopBar({
         ? activeFile
         : project.files.find((f) => /\.html?$/i.test(f.path))
     if (!target) {
-      alertDialog('没有可导出的 HTML 页面。')
+      alertDialog(t('topbar.no_html_to_export'))
       return
     }
     const base = target.path.split('/').pop()!.replace(/\.html?$/i, '') || project.name
@@ -147,7 +149,7 @@ export default function TopBar({
       await exportHtmlToPptx(target.content, base, project.files)
       setShareMenu(false)
     } catch (e) {
-      alertDialog('导出 PPTX 失败：' + (e instanceof Error ? e.message : String(e)))
+      alertDialog(t('topbar.export_pptx_failed', { msg: e instanceof Error ? e.message : String(e) }))
     } finally {
       setPptxBusy(false)
     }
@@ -195,7 +197,7 @@ export default function TopBar({
         className="flex items-center gap-2.5 border-r border-line px-4"
         style={{ width: chatWidth }}
       >
-        <button onClick={() => navigate('/')} className="shrink-0" title="All projects">
+        <button onClick={() => navigate('/')} className="shrink-0" title={t('topbar.all_projects')}>
           <PaletteMark size={26} />
         </button>
         <div className="relative">
@@ -214,11 +216,11 @@ export default function TopBar({
                   className="block w-full rounded-lg px-3 py-2 text-left text-[13.5px] text-ink-soft hover:bg-panel"
                   onClick={async () => {
                     setMenu(false)
-                    const name = await promptDialog('重命名项目', project.name)
+                    const name = await promptDialog(t('topbar.rename_project'), project.name)
                     if (name) renameProject(project.id, name)
                   }}
                 >
-                  Rename project
+                  {t('topbar.rename_project')}
                 </button>
                 <button
                   className="block w-full rounded-lg px-3 py-2 text-left text-[13.5px] text-ink-soft hover:bg-panel"
@@ -227,30 +229,30 @@ export default function TopBar({
                     navigate('/')
                   }}
                 >
-                  Back to all projects
+                  {t('topbar.back_to_projects')}
                 </button>
                 {dss.systems.length > 0 && (
                   <>
                     <div className="my-1 h-px bg-line" />
                     <div className="px-3 pb-0.5 pt-1.5 text-[11px] font-semibold uppercase tracking-wider text-ink-faint">
-                      设计系统
+                      {t('topbar.ds_section')}
                     </div>
                     {(
                       [
                         {
                           key: 'default',
-                          label: `跟随默认${
-                            dss.systems.find((s) => s.id === dss.defaultId)?.name
-                              ? `（${dss.systems.find((s) => s.id === dss.defaultId)!.name}）`
-                              : '（无）'
-                          }`,
+                          label: dss.systems.find((s) => s.id === dss.defaultId)?.name
+                            ? t('topbar.ds_follow_default_named', {
+                                name: dss.systems.find((s) => s.id === dss.defaultId)!.name,
+                              })
+                            : t('topbar.ds_follow_default_none'),
                           checked: project.designSystemId === undefined,
                           pick: undefined as string | null | undefined,
                         },
-                        { key: 'none', label: '不使用', checked: project.designSystemId === null, pick: null },
+                        { key: 'none', label: t('topbar.ds_none'), checked: project.designSystemId === null, pick: null },
                         ...dss.systems.map((s) => ({
                           key: s.id,
-                          label: s.name || '未命名',
+                          label: s.name || t('topbar.ds_unnamed'),
                           checked: project.designSystemId === s.id,
                           pick: s.id as string | null | undefined,
                         })),
@@ -277,19 +279,19 @@ export default function TopBar({
                   className="block w-full rounded-lg px-3 py-2 text-left text-[13.5px] text-coral-dark hover:bg-coral-tint"
                   onClick={async () => {
                     setMenu(false)
-                    if (await confirmDialog(`删除「${project.name}」？此操作不可撤销。`)) {
+                    if (await confirmDialog(t('topbar.delete_project_confirm', { name: project.name }))) {
                       deleteProject(project.id)
                       navigate('/')
                     }
                   }}
                 >
-                  Delete project
+                  {t('topbar.delete_project')}
                 </button>
               </div>
             </>
           )}
         </div>
-        <button className="ml-auto grid h-8 w-8 place-items-center rounded-md text-ink-muted hover:bg-sink" title="Chat">
+        <button className="ml-auto grid h-8 w-8 place-items-center rounded-md text-ink-muted hover:bg-sink" title={t('topbar.chat')}>
           <MessageSquare size={17} />
         </button>
       </div>
@@ -315,18 +317,18 @@ export default function TopBar({
                 onClick={() => setPresentMenu((v) => !v)}
                 className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[13.5px] text-ink-soft hover:bg-sink"
               >
-                Present
+                {t('topbar.present')}
                 <ChevronDown size={13} className="text-ink-faint" />
               </button>
               {presentMenu && (
                 <>
                   <div className="fixed inset-0 z-20" onClick={() => setPresentMenu(false)} />
                   <div className="absolute right-0 top-full z-30 mt-1 w-44 rounded-xl border border-line bg-white p-1 shadow-pop">
-                    <PItem icon={<Maximize2 size={15} />} label="In this tab" onClick={() => openOverlay(false)} />
-                    <PItem icon={<Play size={15} />} label="Fullscreen" onClick={() => openOverlay(true)} />
+                    <PItem icon={<Maximize2 size={15} />} label={t('topbar.present_in_tab')} onClick={() => openOverlay(false)} />
+                    <PItem icon={<Play size={15} />} label={t('topbar.present_fullscreen')} onClick={() => openOverlay(true)} />
                     <PItem
                       icon={<Globe size={15} />}
-                      label="New tab"
+                      label={t('topbar.present_new_tab')}
                       onClick={() => {
                         setPresentMenu(false)
                         presentNewTab()
@@ -342,7 +344,7 @@ export default function TopBar({
               onClick={() => setShareMenu((v) => !v)}
               className="rounded-lg bg-ink px-3.5 py-1.5 text-[13.5px] font-medium text-white hover:bg-ink-soft"
             >
-              Share
+              {t('topbar.share')}
             </button>
             {shareMenu && (
               <>
@@ -358,9 +360,9 @@ export default function TopBar({
                     <FolderArchive size={16} className="mt-0.5 shrink-0 text-ink-muted" />
                     <span>
                       <span className="block text-[13.5px] font-medium text-ink">
-                        Project archive <span className="font-normal text-ink-muted">.zip</span>
+                        {t('topbar.export_zip_title')} <span className="font-normal text-ink-muted">.zip</span>
                       </span>
-                      <span className="block text-[12px] text-ink-muted">项目所有文件打包下载</span>
+                      <span className="block text-[12px] text-ink-muted">{t('topbar.export_zip_desc')}</span>
                     </span>
                   </button>
                   <button
@@ -372,8 +374,8 @@ export default function TopBar({
                   >
                     <Code2 size={16} className="mt-0.5 shrink-0 text-ink-muted" />
                     <span>
-                      <span className="block text-[13.5px] font-medium text-ink">Standalone HTML</span>
-                      <span className="block text-[12px] text-ink-muted">内联成单个自包含 HTML</span>
+                      <span className="block text-[13.5px] font-medium text-ink">{t('topbar.export_html_title')}</span>
+                      <span className="block text-[12px] text-ink-muted">{t('topbar.export_html_desc')}</span>
                     </span>
                   </button>
                   <button
@@ -391,7 +393,7 @@ export default function TopBar({
                         PowerPoint <span className="font-normal text-ink-muted">.pptx</span>
                       </span>
                       <span className="block text-[12px] text-ink-muted">
-                        {pptxBusy ? '正在导出…' : '把当前页面的幻灯片导出为可编辑 PPT'}
+                        {pptxBusy ? t('topbar.exporting') : t('topbar.export_pptx_desc')}
                       </span>
                     </span>
                   </button>
@@ -424,17 +426,17 @@ export default function TopBar({
             <button
               onClick={presentNav.back}
               className="absolute left-4 top-4 flex items-center gap-1 rounded-lg border border-line bg-white/90 px-3 py-1.5 text-[13px] font-medium text-ink shadow-pop backdrop-blur hover:bg-white"
-              title="返回"
+              title={t('topbar.back')}
             >
-              <ChevronLeft size={15} /> 返回
+              <ChevronLeft size={15} /> {t('topbar.back')}
             </button>
           )}
           <button
             onClick={closeOverlay}
             className="absolute right-4 top-4 flex items-center gap-1.5 rounded-lg border border-line bg-white/90 px-3 py-1.5 text-[13px] font-medium text-ink shadow-pop backdrop-blur hover:bg-white"
-            title="退出 (Esc)"
+            title={t('topbar.exit_esc')}
           >
-            <X size={15} /> 退出
+            <X size={15} /> {t('topbar.exit')}
           </button>
         </div>
       )}

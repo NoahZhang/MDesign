@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Check, ImageIcon } from 'lucide-react'
+import { useT } from '../../lib/i18n'
 import type { Question, QuestionSpec } from '../../lib/questions'
 
 type Answer = { selected: string[]; svg: number[]; other: string; text: string }
@@ -15,6 +16,7 @@ export default function QuestionsTab({
   onContinue: (content: string) => void
   running: boolean
 }) {
+  const t = useT()
   const questions = Array.isArray(spec.questions) ? spec.questions : []
   const [ans, setAns] = useState<Record<string, Answer>>(() =>
     Object.fromEntries(questions.map((q) => [q.id, blank()])),
@@ -46,9 +48,10 @@ export default function QuestionsTab({
       const a = get(q.id)
       let val: string
       if (q.kind === 'freeform') val = a.text.trim()
-      else if (q.kind === 'svg-options') val = a.svg.map((i) => `选项${i + 1}`).join('、') || (a.other.trim() ?? '')
-      else val = [...a.selected, a.other.trim()].filter(Boolean).join('、')
-      return `- ${q.title}：${val || '（不限）'}`
+      else if (q.kind === 'svg-options')
+        val = a.svg.map((i) => t('questions.option_n', { n: i + 1 })).join(t('questions.list_sep')) || (a.other.trim() ?? '')
+      else val = [...a.selected, a.other.trim()].filter(Boolean).join(t('questions.list_sep'))
+      return `- ${q.title}${t('questions.kv_sep')}${val || t('questions.no_preference')}`
     })
     onContinue((spec.title ? `${spec.title}\n` : '') + lines.join('\n'))
   }
@@ -68,7 +71,7 @@ export default function QuestionsTab({
                   {q.subtitle ? (
                     <div className="mt-1 text-[13.5px] leading-relaxed text-ink-muted">{q.subtitle}</div>
                   ) : (
-                    q.multi && <div className="mt-1 text-[13px] text-ink-muted">可多选</div>
+                    q.multi && <div className="mt-1 text-[13px] text-ink-muted">{t('questions.multi_select')}</div>
                   )}
 
                   {q.kind === 'freeform' ? (
@@ -77,7 +80,7 @@ export default function QuestionsTab({
                         value={a.text}
                         onChange={(e) => set(q.id, { text: e.target.value })}
                         rows={4}
-                        placeholder="Your answer..."
+                        placeholder={t('questions.answer_placeholder')}
                         className="w-full resize-none rounded-2xl border border-line bg-white px-4 py-3 text-[14px] text-ink placeholder:text-ink-faint focus:border-coral-muted focus:outline-none"
                       />
                       <ImageIcon size={16} className="pointer-events-none absolute bottom-3 right-3.5 text-ink-faint" />
@@ -122,7 +125,7 @@ export default function QuestionsTab({
                       <input
                         value={a.other}
                         onChange={(e) => set(q.id, { other: e.target.value })}
-                        placeholder="Other..."
+                        placeholder={t('questions.other_placeholder')}
                         className="min-w-[180px] rounded-full border border-line bg-white px-4 py-2 text-[14px] text-ink placeholder:text-ink-faint focus:border-coral-muted focus:outline-none"
                       />
                     </div>
@@ -140,7 +143,7 @@ export default function QuestionsTab({
         disabled={running}
         className="absolute bottom-6 right-8 rounded-xl bg-coral px-7 py-2.5 text-[14px] font-medium text-white shadow-pop transition-colors hover:bg-coral-dark disabled:bg-coral-muted"
       >
-        Continue
+        {t('questions.continue')}
       </button>
     </div>
   )

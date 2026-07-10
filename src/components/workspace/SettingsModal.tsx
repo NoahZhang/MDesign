@@ -1,6 +1,8 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Pencil, Plus, RotateCw, Trash2, X } from 'lucide-react'
 import { updateSettings, useSettings } from '../../lib/store'
+import { useT } from '../../lib/i18n'
+import LangSwitcher from '../LangSwitcher'
 import { uid } from '../../lib/id'
 import type { CliAgentConfig, ModelConfig } from '../../lib/types'
 
@@ -16,6 +18,7 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
 }
 
 export default function SettingsModal({ onClose }: { onClose: () => void }) {
+  const t = useT()
   const settings = useSettings()
   const [editing, setEditing] = useState<ModelConfig | null>(null)
   const isNew = editing ? !settings.models.some((m) => m.id === editing.id) : false
@@ -58,7 +61,7 @@ export default function SettingsModal({ onClose }: { onClose: () => void }) {
 
   const save = () => {
     if (!editing) return
-    const cfg: ModelConfig = { ...editing, name: editing.name.trim() || editing.model.trim() || '未命名模型' }
+    const cfg: ModelConfig = { ...editing, name: editing.name.trim() || editing.model.trim() || t('settings.unnamed_model') }
     const exists = settings.models.some((m) => m.id === cfg.id)
     const models = exists ? settings.models.map((m) => (m.id === cfg.id ? cfg : m)) : [...settings.models, cfg]
     updateSettings({ models, activeId: exists ? settings.activeId : cfg.id })
@@ -72,25 +75,28 @@ export default function SettingsModal({ onClose }: { onClose: () => void }) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
-          <h2 className="text-[17px] font-semibold text-ink">模型配置</h2>
-          <button onClick={onClose} className="grid h-8 w-8 place-items-center rounded-md text-ink-muted hover:bg-sink">
-            <X size={17} />
-          </button>
+          <h2 className="text-[17px] font-semibold text-ink">{t('settings.title')}</h2>
+          <div className="flex items-center gap-1">
+            <LangSwitcher />
+            <button onClick={onClose} className="grid h-8 w-8 place-items-center rounded-md text-ink-muted hover:bg-sink">
+              <X size={17} />
+            </button>
+          </div>
         </div>
 
         {editing ? (
           /* ---- add / edit a model ---- */
           <div className="mt-4 space-y-4">
-            <div className="text-[13px] text-ink-muted">{isNew ? '添加模型' : '编辑模型'}</div>
-            <Field label="名称">
+            <div className="text-[13px] text-ink-muted">{isNew ? t('settings.add_model') : t('settings.edit_model')}</div>
+            <Field label={t('settings.name')}>
               <input
                 value={editing.name}
                 onChange={(e) => setEditing({ ...editing, name: e.target.value })}
-                placeholder="例如 ark-code-latest"
+                placeholder={t('settings.name_ph')}
                 className="input"
               />
             </Field>
-            <Field label="Provider（接口协议）">
+            <Field label={t('settings.provider')}>
               <div className="flex gap-2">
                 {(['anthropic', 'openai'] as const).map((api) => (
                   <button
@@ -108,7 +114,7 @@ export default function SettingsModal({ onClose }: { onClose: () => void }) {
                 ))}
               </div>
             </Field>
-            <Field label="模型 ID">
+            <Field label={t('settings.model_id')}>
               <input
                 value={editing.model}
                 onChange={(e) => setEditing({ ...editing, model: e.target.value })}
@@ -116,7 +122,7 @@ export default function SettingsModal({ onClose }: { onClose: () => void }) {
                 className="input"
               />
             </Field>
-            <Field label="API Key">
+            <Field label={t('settings.api_key')}>
               <input
                 type="password"
                 value={editing.apiKey}
@@ -126,29 +132,30 @@ export default function SettingsModal({ onClose }: { onClose: () => void }) {
                 autoComplete="off"
               />
             </Field>
-            <Field label="Base URL（可选）">
+            <Field label={t('settings.base_url')}>
               <input
                 value={editing.baseUrl}
                 onChange={(e) => setEditing({ ...editing, baseUrl: e.target.value })}
-                placeholder={editing.api === 'anthropic' ? '/llm/anthropic 或 /llm/ark/api/coding' : '/llm/openai'}
+                placeholder={editing.api === 'anthropic' ? t('settings.base_url_ph_anthropic') : '/llm/openai'}
                 className="input"
               />
               <p className="mt-1.5 text-[11.5px] leading-snug text-ink-faint">
-                留空走默认代理。火山方舟填 <span className="font-mono">/llm/ark/api/coding</span>；其它 OpenAI
-                兼容端点（Ollama/vLLM/OpenRouter）填它们的地址。
+                {t('settings.base_url_hint_before')}
+                <span className="font-mono">/llm/ark/api/coding</span>
+                {t('settings.base_url_hint_after')}
               </p>
             </Field>
 
             <div className="flex gap-2 pt-1">
               <button onClick={() => setEditing(null)} className="rounded-lg px-3 py-2 text-[13.5px] text-ink-muted hover:bg-sink">
-                取消
+                {t('common.cancel')}
               </button>
               <button
                 onClick={save}
                 disabled={!editing.model.trim()}
                 className="ml-auto rounded-lg bg-ink px-4 py-2 text-[13.5px] font-medium text-white hover:bg-ink-soft disabled:opacity-50"
               >
-                保存
+                {t('common.save')}
               </button>
             </div>
           </div>
@@ -156,7 +163,7 @@ export default function SettingsModal({ onClose }: { onClose: () => void }) {
           /* ---- model list ---- */
           <>
             <p className="mt-1 text-[13px] leading-relaxed text-ink-muted">
-              添加你自己的模型（Anthropic 或 OpenAI 兼容），选一个作为当前使用。
+              {t('settings.intro')}
             </p>
 
             <div className="mt-4 space-y-2">
@@ -182,20 +189,20 @@ export default function SettingsModal({ onClose }: { onClose: () => void }) {
                     <button onClick={() => setActive(m.id)} className="min-w-0 flex-1 text-left">
                       <div className="truncate text-[14px] font-medium text-ink">{m.name}</div>
                       <div className="truncate text-[12px] text-ink-muted">
-                        {m.api} · {m.model || '未填模型ID'} · {m.apiKey ? 'Key ✓' : '无 Key'}
+                        {m.api} · {m.model || t('settings.no_model_id')} · {m.apiKey ? t('settings.has_key') : t('settings.no_key')}
                       </div>
                     </button>
                     <button
                       onClick={() => setEditing(m)}
                       className="grid h-7 w-7 place-items-center rounded-md text-ink-muted hover:bg-sink"
-                      title="编辑"
+                      title={t('common.edit')}
                     >
                       <Pencil size={14} />
                     </button>
                     <button
                       onClick={() => remove(m.id)}
                       className="grid h-7 w-7 place-items-center rounded-md text-ink-muted hover:bg-coral-tint hover:text-coral-dark"
-                      title="删除"
+                      title={t('common.delete')}
                     >
                       <Trash2 size={14} />
                     </button>
@@ -204,7 +211,7 @@ export default function SettingsModal({ onClose }: { onClose: () => void }) {
               })}
               {settings.models.length === 0 && (
                 <div className="rounded-lg border border-dashed border-line px-4 py-6 text-center text-[13px] text-ink-muted">
-                  还没有模型，点下面添加一个。
+                  {t('settings.empty')}
                 </div>
               )}
             </div>
@@ -213,12 +220,12 @@ export default function SettingsModal({ onClose }: { onClose: () => void }) {
               onClick={() => setEditing(blank())}
               className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg border border-line bg-white py-2.5 text-[13.5px] font-medium text-ink-soft hover:bg-panel"
             >
-              <Plus size={16} /> 添加模型
+              <Plus size={16} /> {t('settings.add_model')}
             </button>
 
             <div className="mt-6 border-t border-line pt-4">
               <div className="mb-2 text-[12.5px] font-medium text-ink-soft">
-                CLI agents <span className="font-normal text-ink-faint">· 本地编程 CLI(仅桌面版)</span>
+                {t('settings.cli_agents')} <span className="font-normal text-ink-faint">{t('settings.cli_agents_note')}</span>
               </div>
               <div className="space-y-3">
                 {cliAgents.map((c, i) => (
@@ -239,12 +246,12 @@ export default function SettingsModal({ onClose }: { onClose: () => void }) {
                         <option value="opencode">opencode</option>
                         <option value="claude">claude</option>
                       </select>
-                      <button onClick={() => removeCli(i)} className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-ink-muted hover:bg-coral-tint hover:text-coral-dark" title="删除">
+                      <button onClick={() => removeCli(i)} className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-ink-muted hover:bg-coral-tint hover:text-coral-dark" title={t('common.delete')}>
                         <Trash2 size={14} />
                       </button>
                     </div>
-                    <input value={c.command ?? ''} onChange={(e) => patchCli(i, { command: e.target.value })} placeholder={`可执行命令(默认 ${c.kind},可填绝对路径)`} className={cliInput + ' w-full'} />
-                    <input value={c.proxy ?? ''} onChange={(e) => patchCli(i, { proxy: e.target.value })} placeholder="代理(可选,如 http://127.0.0.1:6152)" className={cliInput + ' w-full'} />
+                    <input value={c.command ?? ''} onChange={(e) => patchCli(i, { command: e.target.value })} placeholder={t('settings.cli_command_ph', { kind: c.kind })} className={cliInput + ' w-full'} />
+                    <input value={c.proxy ?? ''} onChange={(e) => patchCli(i, { proxy: e.target.value })} placeholder={t('settings.cli_proxy_ph')} className={cliInput + ' w-full'} />
                     <div className="flex gap-2">
                       <input
                         value={c.model ?? ''}
@@ -252,10 +259,10 @@ export default function SettingsModal({ onClose }: { onClose: () => void }) {
                         list={`cli-models-${c.id}-${c.kind}`}
                         placeholder={
                           c.kind === 'opencode'
-                            ? '模型(下拉选或手填 provider/model)'
+                            ? t('settings.cli_model_ph_opencode')
                             : c.kind === 'claude'
-                              ? '模型(下拉选或手填,如 sonnet/opus)'
-                              : '模型(下拉选或手填,如 gpt-5.5)'
+                              ? t('settings.cli_model_ph_claude')
+                              : t('settings.cli_model_ph_codex')
                         }
                         className={cliInput + ' min-w-0 flex-1'}
                       />
@@ -268,13 +275,13 @@ export default function SettingsModal({ onClose }: { onClose: () => void }) {
                         <button
                           onClick={() => fetchCliModels(c)}
                           className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-line text-ink-muted hover:bg-panel"
-                          title="拉取该 CLI 支持的模型"
+                          title={t('settings.cli_fetch_models')}
                         >
                           <RotateCw size={14} />
                         </button>
                       )}
-                      <select value={c.reasoning ?? ''} onChange={(e) => patchCli(i, { reasoning: e.target.value })} className={cliInput + ' w-28 shrink-0'} title="思考/推理等级">
-                        <option value="">思考:默认</option>
+                      <select value={c.reasoning ?? ''} onChange={(e) => patchCli(i, { reasoning: e.target.value })} className={cliInput + ' w-28 shrink-0'} title={t('settings.cli_reasoning')}>
+                        <option value="">{t('settings.cli_reasoning_default')}</option>
                         <option value="minimal">minimal</option>
                         <option value="low">low</option>
                         <option value="medium">medium</option>
@@ -282,7 +289,7 @@ export default function SettingsModal({ onClose }: { onClose: () => void }) {
                         <option value="max">max</option>
                       </select>
                     </div>
-                    <input value={c.baseUrl ?? ''} onChange={(e) => patchCli(i, { baseUrl: e.target.value })} placeholder="Base URL 覆盖(可选)" className={cliInput + ' w-full'} />
+                    <input value={c.baseUrl ?? ''} onChange={(e) => patchCli(i, { baseUrl: e.target.value })} placeholder={t('settings.cli_base_url_ph')} className={cliInput + ' w-full'} />
                   </div>
                 ))}
               </div>
@@ -290,10 +297,12 @@ export default function SettingsModal({ onClose }: { onClose: () => void }) {
                 onClick={addCli}
                 className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-line py-2 text-[13px] text-ink-soft hover:bg-panel"
               >
-                <Plus size={15} /> 添加 CLI agent
+                <Plus size={15} /> {t('settings.add_cli')}
               </button>
               <div className="mt-1.5 text-[11px] leading-relaxed text-ink-faint">
-                需先在本机安装并登录对应 CLI(如 <code>codex login</code> / <code>opencode auth</code>)。在输入框上方的下拉里切换 API / CLI。
+                {t('settings.cli_note_before')}
+                <code>codex login</code> / <code>opencode auth</code>
+                {t('settings.cli_note_after')}
               </div>
             </div>
 
@@ -303,9 +312,9 @@ export default function SettingsModal({ onClose }: { onClose: () => void }) {
                 className="flex w-full items-center justify-between rounded-lg border border-line bg-white px-3 py-2.5"
               >
                 <span className="text-left">
-                  <span className="block text-[13.5px] font-medium text-ink">生成后自检</span>
+                  <span className="block text-[13.5px] font-medium text-ink">{t('settings.verify_title')}</span>
                   <span className="block text-[11.5px] text-ink-faint">
-                    完成后自动渲染检查（报错/空白/溢出/坏链）并截图给 AI 视觉自查，有问题先修再交付
+                    {t('settings.verify_desc')}
                   </span>
                 </span>
                 <span

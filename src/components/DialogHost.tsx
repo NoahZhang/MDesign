@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { settleDialog, useDialog } from '../lib/dialog'
+import { useT } from '../lib/i18n'
 
 export default function DialogHost() {
+  const t = useT()
   const req = useDialog()
   const [value, setValue] = useState('')
 
@@ -51,7 +53,7 @@ export default function DialogHost() {
         <div className="mt-4 flex justify-end gap-2">
           {req.kind !== 'alert' && (
             <button onClick={cancel} className="rounded-lg px-3 py-2 text-[13.5px] text-ink-muted hover:bg-sink">
-              取消
+              {t('common.cancel')}
             </button>
           )}
           <button
@@ -62,7 +64,7 @@ export default function DialogHost() {
               (req.kind === 'confirm' && req.danger ? 'bg-coral hover:bg-coral-dark' : 'bg-ink hover:bg-ink-soft')
             }
           >
-            {req.kind === 'alert' ? '好' : '确定'}
+            {req.kind === 'alert' ? t('dialog.ok') : t('common.confirm')}
           </button>
         </div>
       </div>

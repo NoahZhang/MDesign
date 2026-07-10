@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Check, ChevronLeft, MessageSquareText, PenLine, Plus, RotateCw, Type, X } from 'lucide-react'
 import { writeFile } from '../../lib/store'
+import { useT } from '../../lib/i18n'
 import { fileKind } from '../../lib/types'
 import { resolveHtml, resolvePageHref } from '../../lib/resolveHtml'
 import { escapeRe, replaceFlexible } from '../../lib/textEdit'
@@ -284,6 +285,7 @@ export default function FileTabView({
   chatWidth: number
   onSendToChat: (text: string, images?: { data: string; mimeType: string }[]) => void
 }) {
+  const t = useT()
   const file = project.files.find((f) => f.path === path)
   const [reload, setReload] = useState(0)
   const [zoom, setZoom] = useState(100)
@@ -514,7 +516,7 @@ export default function FileTabView({
 
   if (!view) {
     return (
-      <div className="grid h-full place-items-center bg-paper text-[14px] text-ink-faint">This file was removed.</div>
+      <div className="grid h-full place-items-center bg-paper text-[14px] text-ink-faint">{t('filetab.file_removed')}</div>
     )
   }
 
@@ -540,14 +542,13 @@ export default function FileTabView({
   // so the agent can locate the exact element in source.
   const handleCommentsSend = () => {
     if (!pins.length) return
-    const lines = pins.map(
-      (p, i) =>
-        `${i + 1}. ${p.label}：${p.comment}\n   定位: ${p.selector} ｜ 当前样式: ${p.style}`,
+    const lines = pins.map((p, i) =>
+      t('filetab.comment_line', { n: i + 1, label: p.label, comment: p.comment, selector: p.selector, style: p.style }),
     )
     const msg =
-      `我对设计稿里的具体元素提了 ${pins.length} 条修改意见，请逐条修改（其余部分保持不变）：\n` +
+      t('filetab.comments_msg_head', { count: pins.length }) +
       lines.join('\n') +
-      `\n\n（“定位”是渲染后的 DOM 路径，请据此在源码中找到对应元素；当前文件：${currentPath}）`
+      t('filetab.comments_msg_foot', { path: currentPath })
     onSendToChat(msg)
     setMode('view')
   }
@@ -555,8 +556,8 @@ export default function FileTabView({
   // Screenshot the marked-up design (preview + annotations) and send it, with the note,
   // to the chat so the agent can see exactly what was marked.
   const handleMarkupSend = async (shapes: Shape[], note: string) => {
-    const text = note.trim() || '我在设计稿上做了标注，请按标注修改，其余部分保持不变。'
-    const msg = `${text}\n\n（当前文件：${currentPath}）`
+    const text = note.trim() || t('filetab.markup_default_note')
+    const msg = `${text}\n\n${t('filetab.current_file_paren', { path: currentPath })}`
     const doc = iframeRef.current?.contentDocument
     try {
       if (!doc) throw new Error('no preview')
@@ -581,7 +582,7 @@ export default function FileTabView({
     } catch {
       /* fall through to a text-only message */
     }
-    onSendToChat(shapes.length ? `${msg}\n（共 ${shapes.length} 处标注；截图失败，请结合描述理解）` : msg)
+    onSendToChat(shapes.length ? `${msg}\n${t('filetab.markup_shot_failed', { count: shapes.length })}` : msg)
     setMode('view')
   }
 
@@ -680,7 +681,7 @@ export default function FileTabView({
               setCurrentPath(prev)
             }}
             className="grid h-8 w-8 place-items-center rounded-md text-ink-muted hover:bg-sink"
-            title="返回"
+            title={t('filetab.back')}
           >
             <ChevronLeft size={16} />
           </button>
@@ -688,7 +689,7 @@ export default function FileTabView({
         <button
           onClick={() => setReload((r) => r + 1)}
           className="grid h-8 w-8 place-items-center rounded-md text-ink-muted hover:bg-sink"
-          title="Reload"
+          title={t('filetab.reload')}
         >
           <RotateCw size={15} />
         </button>
@@ -696,25 +697,25 @@ export default function FileTabView({
           <div className="ml-auto flex items-center gap-0.5">
             <ToolBtn
               icon={<PenLine size={15} />}
-              label="Mark up"
+              label={t('filetab.markup')}
               onClick={toggleMarkup}
               active={mode === 'markup'}
-              title="在设计上画框/箭头/写标注"
+              title={t('filetab.markup_tip')}
             />
-            <ToolBtn icon={<Type size={15} />} label="Edit" onClick={toggleEdit} active={mode === 'edit'} title="点选元素改文字和样式" />
-            <ToolBtn icon={<Plus size={15} />} label="Tweaks" onClick={toggleTweaks} active={mode === 'tweaks'} title="实时调 CSS 变量" />
+            <ToolBtn icon={<Type size={15} />} label={t('common.edit')} onClick={toggleEdit} active={mode === 'edit'} title={t('filetab.edit_tip')} />
+            <ToolBtn icon={<Plus size={15} />} label={t('filetab.tweaks')} onClick={toggleTweaks} active={mode === 'tweaks'} title={t('filetab.tweaks_tip')} />
             <ToolBtn
               icon={<MessageSquareText size={15} />}
-              label="Comments"
+              label={t('filetab.comments')}
               onClick={toggleComments}
               active={mode === 'comments'}
-              title="点元素留评论，发给 AI 修改"
+              title={t('filetab.comments_tip')}
             />
             <div className="relative ml-1">
               <button
                 onClick={() => setZoomMenu((v) => !v)}
                 className="flex items-center gap-0.5 rounded-md px-2 py-1.5 text-[13px] tabular-nums text-ink-soft hover:bg-sink"
-                title="Zoom"
+                title={t('filetab.zoom')}
               >
                 {zoom}%
               </button>
@@ -786,16 +787,16 @@ export default function FileTabView({
 
           {mode === 'edit' && (
             <div className="absolute inset-x-0 bottom-0 flex items-center gap-3 border-t border-line bg-panel px-4 py-2.5">
-              <span className="text-[12.5px] text-ink-muted">编辑模式 · 点元素选中，改文字或左侧样式</span>
+              <span className="text-[12.5px] text-ink-muted">{t('filetab.edit_mode_hint')}</span>
               <div className="ml-auto flex items-center gap-2">
                 <button onClick={cancelEdit} className="rounded-lg px-3 py-1.5 text-[13px] text-ink-muted hover:bg-sink">
-                  取消
+                  {t('common.cancel')}
                 </button>
                 <button
                   onClick={saveEdit}
                   className="flex items-center gap-1.5 rounded-lg bg-coral px-3.5 py-1.5 text-[13px] font-medium text-white hover:bg-coral-dark"
                 >
-                  <Check size={14} /> 保存
+                  <Check size={14} /> {t('common.save')}
                 </button>
               </div>
             </div>
@@ -837,7 +838,7 @@ export default function FileTabView({
                       }
                     }}
                     rows={2}
-                    placeholder="这个元素要怎么改…"
+                    placeholder={t('filetab.pin_placeholder')}
                     className="w-full resize-none rounded-lg border border-line bg-panel px-2.5 py-2 text-[13px] text-ink placeholder:text-ink-faint focus:border-coral-muted focus:outline-none"
                   />
                   <div className="mt-2 flex justify-end gap-2">
@@ -848,14 +849,14 @@ export default function FileTabView({
                       }}
                       className="rounded-md px-2.5 py-1.5 text-[12.5px] text-ink-muted hover:bg-sink"
                     >
-                      取消
+                      {t('common.cancel')}
                     </button>
                     <button
                       onClick={commitDraftPin}
                       disabled={!draftText.trim()}
                       className="rounded-md bg-coral px-3 py-1.5 text-[12.5px] font-medium text-white hover:bg-coral-dark disabled:bg-coral-muted"
                     >
-                      添加
+                      {t('filetab.add')}
                     </button>
                   </div>
                 </div>
@@ -863,21 +864,21 @@ export default function FileTabView({
 
               <div className="pointer-events-auto absolute inset-x-0 bottom-0 flex items-center gap-3 border-t border-line bg-panel px-4 py-2.5">
                 <span className="text-[12.5px] text-ink-muted">
-                  评论模式 · 点击元素添加评论{pins.length > 0 ? `（已添加 ${pins.length} 条）` : ''}
+                  {t('filetab.comments_mode_hint')}{pins.length > 0 ? t('filetab.comments_added', { count: pins.length }) : ''}
                 </span>
                 <div className="ml-auto flex items-center gap-2">
                   <button
                     onClick={() => setMode('view')}
                     className="rounded-lg px-3 py-1.5 text-[13px] text-ink-muted hover:bg-sink"
                   >
-                    取消
+                    {t('common.cancel')}
                   </button>
                   <button
                     onClick={handleCommentsSend}
                     disabled={pins.length === 0}
                     className="flex items-center gap-1.5 rounded-lg bg-coral px-3.5 py-1.5 text-[13px] font-medium text-white hover:bg-coral-dark disabled:bg-coral-muted"
                   >
-                    <MessageSquareText size={14} /> 发给 Claude（{pins.length}）
+                    <MessageSquareText size={14} /> {t('filetab.send_to_claude', { count: pins.length })}
                   </button>
                 </div>
               </div>
@@ -888,14 +889,16 @@ export default function FileTabView({
         {mode === 'tweaks' && (
           <div className="thin-scrollbar w-[280px] shrink-0 overflow-y-auto border-l border-line bg-panel">
             <div className="flex items-center justify-between border-b border-line px-4 py-2.5">
-              <span className="text-[13px] font-semibold text-ink">Tweaks</span>
+              <span className="text-[13px] font-semibold text-ink">{t('filetab.tweaks')}</span>
               <button onClick={() => setMode('view')} className="grid h-7 w-7 place-items-center rounded-md text-ink-muted hover:bg-sink">
                 <X size={15} />
               </button>
             </div>
             {vars.length === 0 ? (
               <p className="px-4 py-5 text-[12.5px] leading-relaxed text-ink-muted">
-                该文件没有 <span className="font-mono">:root</span> CSS 变量可调。
+                {t('filetab.no_vars_before')}
+                <span className="font-mono">:root</span>
+                {t('filetab.no_vars_after')}
               </p>
             ) : (
               <>
@@ -931,13 +934,13 @@ export default function FileTabView({
                     disabled={Object.keys(tweaks).length === 0}
                     className="flex-1 rounded-lg bg-coral py-2 text-[13px] font-medium text-white hover:bg-coral-dark disabled:bg-coral-muted"
                   >
-                    保存到文件
+                    {t('filetab.save_to_file')}
                   </button>
                   <button
                     onClick={() => setTweaks({})}
                     className="rounded-lg border border-line bg-white px-3 py-2 text-[13px] text-ink-soft hover:bg-sink"
                   >
-                    重置
+                    {t('filetab.reset')}
                   </button>
                 </div>
               </>

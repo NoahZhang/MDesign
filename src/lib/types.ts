@@ -73,6 +73,8 @@ export interface Settings {
   cliAgents?: CliAgentConfig[]
   /** Which CLI agent is active (CLI mode). */
   activeCliId?: string
+  /** UI language (undefined = auto-detect from the OS). */
+  lang?: 'en' | 'zh'
 }
 
 /** The currently-active model config (falls back to the first, or undefined if none). */

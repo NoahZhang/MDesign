@@ -5,17 +5,26 @@ import { Logo } from '../Logo'
 import SettingsModal from '../workspace/SettingsModal'
 import DesignSystemModal from './DesignSystemModal'
 import { createProject, useDesignSystems } from '../../lib/store'
+import { useT } from '../../lib/i18n'
 import type { ProjectCategory } from '../../lib/types'
 
 const CATEGORIES: ProjectCategory[] = ['Prototype', 'Slide deck', 'Template', 'Other']
 
 export default function Sidebar() {
+  const t = useT()
   const navigate = useNavigate()
   const { systems, defaultId } = useDesignSystems()
   const [category, setCategory] = useState<ProjectCategory>('Prototype')
   const [showSettings, setShowSettings] = useState(false)
   const [showDS, setShowDS] = useState(false)
   const [name, setName] = useState('')
+
+  const CATEGORY_LABELS: Record<ProjectCategory, string> = {
+    Prototype: t('sidebar.cat_prototype'),
+    'Slide deck': t('sidebar.cat_slide_deck'),
+    Template: t('sidebar.cat_template'),
+    Other: t('sidebar.cat_other'),
+  }
 
   const defaultDs = systems.find((s) => s.id === defaultId)
 
@@ -42,7 +51,7 @@ export default function Sidebar() {
                   : 'px-0.5 py-1 text-ink-muted transition-colors hover:text-ink'
               }
             >
-              {c}
+              {CATEGORY_LABELS[c]}
             </button>
           )
         })}
@@ -50,22 +59,22 @@ export default function Sidebar() {
 
       {/* new project */}
       <div className="mt-3 rounded-2xl border border-line bg-white p-5 shadow-card">
-        <div className="text-[16px] font-semibold text-ink">New project</div>
+        <div className="text-[16px] font-semibold text-ink">{t('sidebar.new_project')}</div>
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="Project name"
+          placeholder={t('sidebar.project_name_placeholder')}
           className="mt-3.5 w-full rounded-lg border border-line bg-panel px-3 py-2.5 text-[14.5px] text-ink placeholder:text-ink-faint focus:border-coral-muted focus:outline-none"
         />
         <button
           onClick={create}
           className="mt-3 w-full rounded-lg bg-coral py-2.5 text-[14.5px] font-medium text-white transition-colors hover:bg-coral-dark"
         >
-          Create
+          {t('common.create')}
         </button>
       </div>
       <p className="mt-3 px-1 text-[12.5px] leading-snug text-ink-faint">
-        Only you can see your project by default.
+        {t('sidebar.visibility_note')}
       </p>
 
       {/* design systems */}
@@ -75,9 +84,9 @@ export default function Sidebar() {
             {defaultDs ? (
               <>
                 <div className="flex items-center gap-1.5 text-[13px] font-medium text-coral-dark">
-                  <Check size={15} /> 默认设计系统
+                  <Check size={15} /> {t('ds.default_system')}
                 </div>
-                <div className="mt-1.5 text-[14px] font-semibold text-ink">{defaultDs.name || '未命名'}</div>
+                <div className="mt-1.5 text-[14px] font-semibold text-ink">{defaultDs.name || t('ds.untitled')}</div>
                 {defaultDs.colors.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {defaultDs.colors.slice(0, 8).map((c, i) => (
@@ -88,26 +97,26 @@ export default function Sidebar() {
               </>
             ) : (
               <p className="text-[13.5px] leading-relaxed text-ink-soft">
-                已有 {systems.length} 套设计系统,未设默认——项目可单独选用。
+                {t('sidebar.no_default_note', { n: systems.length })}
               </p>
             )}
             <button
               onClick={() => setShowDS(true)}
               className="mt-4 w-full rounded-lg border border-line bg-white py-2.5 text-[14px] font-medium text-ink-soft transition-colors hover:bg-panel"
             >
-              管理设计系统（{systems.length}）
+              {t('ds.manage', { n: systems.length })}
             </button>
           </>
         ) : (
           <>
             <p className="text-[14px] leading-relaxed text-ink-soft">
-              建一套设计系统(配色 / 字体 / 风格),生成时自动套用,产出更一致。
+              {t('ds.setup_pitch')}
             </p>
             <button
               onClick={() => setShowDS(true)}
               className="mt-4 w-full rounded-lg bg-ink py-2.5 text-[14px] font-medium text-white transition-colors hover:bg-ink-soft"
             >
-              Set up design system
+              {t('ds.setup_button')}
             </button>
           </>
         )}
@@ -118,7 +127,7 @@ export default function Sidebar() {
         className="mt-3 flex w-full items-center gap-2 rounded-lg border border-line bg-white px-4 py-2.5 text-[14px] font-medium text-ink-soft transition-colors hover:bg-panel"
       >
         <SlidersHorizontal size={16} className="text-ink-muted" />
-        模型配置
+        {t('sidebar.model_settings')}
       </button>
 
       {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}

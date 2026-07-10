@@ -5,6 +5,7 @@ import type { Message } from '../../pi-ai'
 import type { AgentStatus } from '../../agent/agent'
 import { getSystemPrompt } from '../../agent/systemPrompt'
 import { clearMessages, useSettings } from '../../lib/store'
+import { useT } from '../../lib/i18n'
 import { activeModel } from '../../lib/types'
 import type { Project } from '../../lib/types'
 import Composer from './Composer'
@@ -25,6 +26,7 @@ export default function ChatPanel({
   onSend: (text: string, images: { data: string; mimeType: string }[]) => void
   onStop: () => void
 }) {
+  const t = useT()
   const settings = useSettings()
   const [bannerHidden, setBannerHidden] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -55,10 +57,9 @@ export default function ChatPanel({
       <div ref={scrollRef} className="thin-scrollbar flex-1 overflow-y-auto px-5 py-5">
         {messages.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center text-center">
-            <p className="text-[15px] font-medium text-ink">Start designing</p>
+            <p className="text-[15px] font-medium text-ink">{t('chat.empty_title')}</p>
             <p className="mt-1.5 max-w-[260px] text-[13.5px] leading-relaxed text-ink-muted">
-              Describe a page, prototype, or component. I’ll create the files in this project and preview them on
-              the right.
+              {t('chat.empty_desc')}
             </p>
           </div>
         ) : (
@@ -78,9 +79,9 @@ export default function ChatPanel({
             {showBanner && (
               <div className="rounded-xl border border-coral-muted/50 bg-coral-tint px-4 py-3.5">
                 <div className="text-[14px] font-semibold text-ink">
-                  Start a new chat to save {usage.convK}k tokens of context
+                  {t('chat.save_banner', { k: usage.convK })}
                 </div>
-                <div className="mt-0.5 text-[13px] text-ink-muted">Your project and files stay put.</div>
+                <div className="mt-0.5 text-[13px] text-ink-muted">{t('chat.save_banner_sub')}</div>
                 <div className="mt-3 flex items-center gap-2">
                   <button
                     onClick={() => {
@@ -89,13 +90,13 @@ export default function ChatPanel({
                     }}
                     className="rounded-lg border border-line bg-white px-3 py-1.5 text-[13px] font-medium text-ink hover:bg-panel"
                   >
-                    New chat
+                    {t('chat.new_chat')}
                   </button>
                   <button
                     onClick={() => setBannerHidden(true)}
                     className="px-2 py-1.5 text-[13px] text-ink-muted hover:text-ink"
                   >
-                    Continue here
+                    {t('chat.continue_here')}
                   </button>
                 </div>
               </div>

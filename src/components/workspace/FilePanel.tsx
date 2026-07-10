@@ -3,6 +3,7 @@ import { ChevronRight, Folder, Loader2, MoreHorizontal, RefreshCw, Upload } from
 import { relTime } from '../../lib/format'
 import { deleteFiles, renameFile } from '../../lib/store'
 import { confirmDialog, promptDialog } from '../../lib/dialog'
+import { useT } from '../../lib/i18n'
 import { ingestDrop } from '../../lib/ingestFiles'
 import { fileKind } from '../../lib/types'
 import type { Project, ProjectFile } from '../../lib/types'
@@ -43,6 +44,7 @@ function Row({
   onDelete?: () => void
   trailing?: ReactNode
 }) {
+  const t = useT()
   const [menu, setMenu] = useState(false)
   return (
     <div
@@ -83,7 +85,7 @@ function Row({
                     className="block w-full rounded-lg px-3 py-2 text-left text-[13px] text-ink-soft hover:bg-panel"
                     onClick={(e) => { e.stopPropagation(); setMenu(false); onRename() }}
                   >
-                    Rename
+                    {t('filepanel.rename')}
                   </button>
                 )}
                 {onDelete && (
@@ -91,7 +93,7 @@ function Row({
                     className="block w-full rounded-lg px-3 py-2 text-left text-[13px] text-coral-dark hover:bg-coral-tint"
                     onClick={(e) => { e.stopPropagation(); setMenu(false); onDelete() }}
                   >
-                    Delete
+                    {t('common.delete')}
                   </button>
                 )}
               </div>
@@ -114,6 +116,7 @@ export default function FilePanel({
   onSelect: (path: string | null) => void
   onOpenFile: (path: string) => void
 }) {
+  const t = useT()
   const [openFolders, setOpenFolders] = useState<Record<string, boolean>>({})
   const [spin, setSpin] = useState(false)
   const [dragging, setDragging] = useState(false)
@@ -160,14 +163,14 @@ export default function FilePanel({
 
 
   const rename = async (f: ProjectFile) => {
-    const to = await promptDialog('重命名文件', f.path)
+    const to = await promptDialog(t('filepanel.rename_file'), f.path)
     if (to && to !== f.path) {
       renameFile(project.id, f.path, to)
       if (selected === f.path) onSelect(to)
     }
   }
   const del = async (f: ProjectFile) => {
-    if (await confirmDialog(`删除文件「${f.path}」？`)) {
+    if (await confirmDialog(t('filepanel.delete_file_confirm', { path: f.path }))) {
       deleteFiles(project.id, [f.path])
       if (selected === f.path) onSelect(null)
     }
@@ -212,7 +215,7 @@ export default function FilePanel({
         <div className="pointer-events-none absolute inset-2 z-40 grid place-items-center rounded-xl border-2 border-dashed border-coral bg-coral-tint/70 backdrop-blur-sm">
           <div className="flex items-center gap-2 text-[14px] font-medium text-coral-dark">
             {importing ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
-            {importing ? '正在导入…' : '松开即可加入项目'}
+            {importing ? t('filepanel.importing') : t('filepanel.drop_to_add')}
           </div>
         </div>
       )}
@@ -228,7 +231,7 @@ export default function FilePanel({
       />
       {/* toolbar */}
       <div className="flex items-center gap-3 border-b border-line px-4 py-2.5">
-        <button className="grid h-7 w-7 place-items-center rounded-md text-ink-muted hover:bg-panel" title="Up">
+        <button className="grid h-7 w-7 place-items-center rounded-md text-ink-muted hover:bg-panel" title={t('filepanel.up')}>
           <ChevronRight size={16} className="-rotate-90" />
         </button>
         <button
@@ -237,18 +240,18 @@ export default function FilePanel({
             setTimeout(() => setSpin(false), 500)
           }}
           className="grid h-7 w-7 place-items-center rounded-md text-ink-muted hover:bg-panel"
-          title="Refresh"
+          title={t('filepanel.refresh')}
         >
           <RefreshCw size={15} className={spin ? 'animate-spin' : ''} />
         </button>
-        <span className="text-[13.5px] font-medium text-ink-soft">project</span>
+        <span className="text-[13.5px] font-medium text-ink-soft">{t('filepanel.breadcrumb_project')}</span>
       </div>
 
       {/* sections */}
       <div className="thin-scrollbar flex-1 overflow-y-auto">
         {folderNames.length > 0 && (
           <>
-            <div className={SECTION}>Folders</div>
+            <div className={SECTION}>{t('filepanel.folders')}</div>
             {folderNames.map((name) => {
               const children = visible.filter((f) => f.path.startsWith(name + '/'))
               const open = openFolders[name]
@@ -257,7 +260,7 @@ export default function FilePanel({
                   <Row
                     icon={<Folder size={20} className="text-ink-faint" />}
                     title={name}
-                    subtitle="Folder"
+                    subtitle={t('filepanel.folder')}
                     meta="—"
                     onClick={() => setOpenFolders((s) => ({ ...s, [name]: !s[name] }))}
                     trailing={
@@ -269,7 +272,7 @@ export default function FilePanel({
                   />
                   {open &&
                     (children.length === 0 ? (
-                      <div className="border-b border-line/60 py-2.5 pl-12 text-[12.5px] text-ink-faint">empty</div>
+                      <div className="border-b border-line/60 py-2.5 pl-12 text-[12.5px] text-ink-faint">{t('filepanel.empty_folder')}</div>
                     ) : (
                       children.map((f) => (
                         <div key={f.path} className="pl-6">
@@ -285,28 +288,28 @@ export default function FilePanel({
 
         {pages.length > 0 && (
           <>
-            <div className={SECTION}>Pages</div>
-            {pages.map((f) => fileRow(f, 'page', 'HTML page'))}
+            <div className={SECTION}>{t('filepanel.pages')}</div>
+            {pages.map((f) => fileRow(f, 'page', t('filepanel.html_page')))}
           </>
         )}
 
         {components.length > 0 && (
           <>
-            <div className={SECTION}>Components</div>
-            {components.map((f) => fileRow(f, 'component', 'Component'))}
+            <div className={SECTION}>{t('filepanel.components')}</div>
+            {components.map((f) => fileRow(f, 'component', t('filepanel.component')))}
           </>
         )}
 
         {others.length > 0 && (
           <>
-            <div className={SECTION}>Files</div>
+            <div className={SECTION}>{t('filepanel.files')}</div>
             {others.map((f) => fileRow(f, 'doc', f.contentType))}
           </>
         )}
 
         {visible.length === 0 && (
           <div className="px-4 py-10 text-center text-[13px] text-ink-muted">
-            No files yet. Describe something in chat and I’ll create the files here.
+            {t('filepanel.no_files')}
           </div>
         )}
       </div>
@@ -315,11 +318,11 @@ export default function FilePanel({
       <button
         onClick={() => inputRef.current?.click()}
         className="flex w-full items-center gap-2 border-t border-line px-4 py-3 text-left text-[12.5px] text-ink-muted transition-colors hover:bg-panel"
-        title="点击选择文件，或把文件/文件夹拖到这里"
+        title={t('filepanel.drop_hint_title')}
       >
         <Upload size={14} className="text-ink-faint" />
-        <span className="font-semibold uppercase tracking-wide text-ink-faint">Drop files here</span>
-        <span className="truncate">— Images, docs, or folders.</span>
+        <span className="font-semibold uppercase tracking-wide text-ink-faint">{t('filepanel.drop_files')}</span>
+        <span className="truncate">{t('filepanel.drop_files_sub')}</span>
       </button>
     </div>
   )

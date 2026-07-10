@@ -3,12 +3,14 @@ import { ChevronLeft, ChevronRight, Download, Loader2, Pencil } from 'lucide-rea
 import { buildSlideDoc, parseDeckHtml, SLIDE_H, SLIDE_W } from '../../lib/deckHtml'
 import { exportHtmlToPptx } from '../../lib/htmlToPptx'
 import { getProject, writeFile } from '../../lib/store'
+import { useT } from '../../lib/i18n'
 import { replaceFlexible } from '../../lib/textEdit'
 import type { Project } from '../../lib/types'
 
 const THUMB_W = 168
 
 export default function DeckView({ project, path }: { project: Project; path: string }) {
+  const t = useT()
   const file = project.files.find((f) => f.path === path)
   const { head, slides } = useMemo(() => (file ? parseDeckHtml(file.content) : { head: '', slides: [] }), [file?.content])
   // Memoize on the deck's own content (head/slides derive from it), NOT the whole project.files —
@@ -97,7 +99,7 @@ export default function DeckView({ project, path }: { project: Project; path: st
     doc.addEventListener('blur', onBlur, true)
   }
 
-  const name = (path.split('/').pop() || 'Deck').replace(/\.html?$/i, '')
+  const name = (path.split('/').pop() || t('deck.untitled')).replace(/\.html?$/i, '')
   const exportPptx = async () => {
     if (!file) return
     setBusy(true)
@@ -108,16 +110,16 @@ export default function DeckView({ project, path }: { project: Project; path: st
     }
   }
 
-  if (!file) return <div className="grid h-full place-items-center bg-paper text-[14px] text-ink-faint">This file was removed.</div>
+  if (!file) return <div className="grid h-full place-items-center bg-paper text-[14px] text-ink-faint">{t('deck.file_removed')}</div>
 
   return (
     <div className="flex h-full flex-col bg-paper">
       <div className="flex items-center gap-2 border-b border-line bg-panel px-4 py-2">
-        <button onClick={() => setIdx((i) => Math.max(i - 1, 0))} disabled={cur <= 0} className="grid h-8 w-8 place-items-center rounded-md text-ink-muted hover:bg-sink disabled:opacity-40" title="上一页 (←)">
+        <button onClick={() => setIdx((i) => Math.max(i - 1, 0))} disabled={cur <= 0} className="grid h-8 w-8 place-items-center rounded-md text-ink-muted hover:bg-sink disabled:opacity-40" title={t('deck.prev')}>
           <ChevronLeft size={16} />
         </button>
         <span className="min-w-[52px] text-center text-[13px] tabular-nums text-ink-soft">{n ? cur + 1 : 0} / {n}</span>
-        <button onClick={() => setIdx((i) => Math.min(i + 1, n - 1))} disabled={cur >= n - 1} className="grid h-8 w-8 place-items-center rounded-md text-ink-muted hover:bg-sink disabled:opacity-40" title="下一页 (→)">
+        <button onClick={() => setIdx((i) => Math.min(i + 1, n - 1))} disabled={cur >= n - 1} className="grid h-8 w-8 place-items-center rounded-md text-ink-muted hover:bg-sink disabled:opacity-40" title={t('deck.next')}>
           <ChevronRight size={16} />
         </button>
         <span className="truncate pl-1 text-[13px] font-medium text-ink">{name}</span>
@@ -125,12 +127,12 @@ export default function DeckView({ project, path }: { project: Project; path: st
           <button
             onClick={() => setEditing((v) => !v)}
             className={'flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[13px] transition-colors ' + (editing ? 'bg-coral-tint text-coral-dark' : 'text-ink-muted hover:bg-sink')}
-            title="双击文字即可编辑"
+            title={t('deck.edit_tip')}
           >
-            <Pencil size={14} /> {editing ? '编辑中' : '编辑'}
+            <Pencil size={14} /> {editing ? t('deck.editing') : t('common.edit')}
           </button>
-          <button onClick={exportPptx} disabled={busy || !n} className="flex items-center gap-1.5 rounded-lg bg-ink px-3 py-1.5 text-[13px] font-medium text-white hover:bg-ink-soft disabled:opacity-50" title="导出可编辑的 PowerPoint">
-            {busy ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} Download .pptx
+          <button onClick={exportPptx} disabled={busy || !n} className="flex items-center gap-1.5 rounded-lg bg-ink px-3 py-1.5 text-[13px] font-medium text-white hover:bg-ink-soft disabled:opacity-50" title={t('deck.export_tip')}>
+            {busy ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} {t('deck.download_pptx')}
           </button>
         </div>
       </div>

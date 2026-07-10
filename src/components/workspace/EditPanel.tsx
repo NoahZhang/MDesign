@@ -1,4 +1,5 @@
 import { X } from 'lucide-react'
+import { useT } from '../../lib/i18n'
 
 export type EditValues = Record<string, string>
 
@@ -66,13 +67,14 @@ export default function EditPanel({
   onChange: (key: string, value: string) => void
   onClose: () => void
 }) {
+  const t = useT()
   const v = values
   const set = (k: string) => (val: string) => onChange(k, val)
 
   return (
     <div className="thin-scrollbar flex h-full w-full flex-col overflow-y-auto bg-panel">
       <div className="sticky top-0 z-10 flex items-center justify-between border-b border-line bg-panel px-4 py-2.5">
-        <span className="text-[14px] font-semibold text-ink">Edit</span>
+        <span className="text-[14px] font-semibold text-ink">{t('common.edit')}</span>
         <button onClick={onClose} className="grid h-7 w-7 place-items-center rounded-md text-ink-muted hover:bg-sink">
           <X size={15} />
         </button>
@@ -80,25 +82,25 @@ export default function EditPanel({
 
       {!v ? (
         <p className="px-4 py-5 text-[12.5px] leading-relaxed text-ink-muted">
-          点选预览里的任意元素来编辑它的文字与样式。
+          {t('edit.empty')}
         </p>
       ) : (
         <div className="pb-6">
-          <Section title="Typography" />
+          <Section title={t('edit.typography')} />
           <div className="space-y-2 px-4">
-            <Box label="Font">
+            <Box label={t('edit.font')}>
               <Select value={v.font} options={FONTS} onChange={set('font')} />
             </Box>
             <div className="grid grid-cols-2 gap-2">
-              <Box label="Size">
+              <Box label={t('edit.size')}>
                 <Num value={v.size} onChange={set('size')} unit="px" />
               </Box>
-              <Box label="Weight">
+              <Box label={t('edit.weight')}>
                 <Select value={v.weight} options={WEIGHTS} onChange={set('weight')} />
               </Box>
             </div>
             <div className="grid grid-cols-2 gap-2">
-              <Box label="Color">
+              <Box label={t('edit.color')}>
                 <span className="flex items-center gap-2">
                   <input
                     type="color"
@@ -113,45 +115,45 @@ export default function EditPanel({
                   />
                 </span>
               </Box>
-              <Box label="Align">
+              <Box label={t('edit.align')}>
                 <Select value={v.align} options={ALIGNS} onChange={set('align')} />
               </Box>
             </div>
             <div className="grid grid-cols-2 gap-2">
-              <Box label="Line Height">
+              <Box label={t('edit.line_height')}>
                 <Num value={v.lineHeight} onChange={set('lineHeight')} />
               </Box>
-              <Box label="Tracking">
+              <Box label={t('edit.tracking')}>
                 <Num value={v.tracking} onChange={set('tracking')} unit="px" />
               </Box>
             </div>
           </div>
 
-          <Section title="Size" />
+          <Section title={t('edit.size_section')} />
           <div className="grid grid-cols-2 gap-2 px-4">
-            <Box label="Width">
+            <Box label={t('edit.width')}>
               <Num value={v.width} onChange={set('width')} unit="px" />
             </Box>
-            <Box label="Height">
+            <Box label={t('edit.height')}>
               <Num value={v.height} onChange={set('height')} unit="px" />
             </Box>
           </div>
 
-          <Section title="Box" />
+          <Section title={t('edit.box_section')} />
           <div className="space-y-2 px-4">
-            <Box label="Opacity">
+            <Box label={t('edit.opacity')}>
               <Num value={v.opacity} onChange={set('opacity')} unit="%" />
             </Box>
-            <Box label="Padding">
+            <Box label={t('edit.padding')}>
               <Num value={v.padding} onChange={set('padding')} unit="px" />
             </Box>
-            <Box label="Margin">
+            <Box label={t('edit.margin')}>
               <Num value={v.margin} onChange={set('margin')} unit="px" />
             </Box>
-            <Box label="Border">
+            <Box label={t('edit.border')}>
               <Num value={v.border} onChange={set('border')} unit="px" />
             </Box>
-            <Box label="Border Radius">
+            <Box label={t('edit.border_radius')}>
               <Num value={v.radius} onChange={set('radius')} unit="px" />
             </Box>
           </div>

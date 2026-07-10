@@ -1,5 +1,6 @@
 import { useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import { ArrowUpRight, Pen, Send, Square, Trash2, Type as TypeIcon, Undo2 } from 'lucide-react'
+import { useT } from '../../lib/i18n'
 
 export type Shape =
   | { id: string; type: 'box'; x: number; y: number; w: number; h: number; color: string }
@@ -52,6 +53,7 @@ function renderShape(s: Shape) {
 }
 
 export default function MarkupLayer({ onSend, onClose }: { onSend: (shapes: Shape[], note: string) => void; onClose: () => void }) {
+  const t = useT()
   const [tool, setTool] = useState<Tool>('pen')
   const [color, setColor] = useState(COLORS[0])
   const [shapes, setShapes] = useState<Shape[]>([])
@@ -107,10 +109,10 @@ export default function MarkupLayer({ onSend, onClose }: { onSend: (shapes: Shap
 
   const textShapes = shapes.filter((s): s is Extract<Shape, { type: 'text' }> => s.type === 'text')
   const TOOLS: { id: Tool; icon: typeof Square; label: string }[] = [
-    { id: 'box', icon: Square, label: '框' },
-    { id: 'arrow', icon: ArrowUpRight, label: '箭头' },
-    { id: 'pen', icon: Pen, label: '画笔' },
-    { id: 'text', icon: TypeIcon, label: '文字' },
+    { id: 'box', icon: Square, label: t('markup.box') },
+    { id: 'arrow', icon: ArrowUpRight, label: t('markup.arrow') },
+    { id: 'pen', icon: Pen, label: t('markup.pen') },
+    { id: 'text', icon: TypeIcon, label: t('markup.text') },
   ]
 
   return (
@@ -146,7 +148,7 @@ export default function MarkupLayer({ onSend, onClose }: { onSend: (shapes: Shap
               if (e.key === 'Enter' && !e.nativeEvent.isComposing) commitText()
               if (e.key === 'Escape') setTextInput(null)
             }}
-            placeholder="改什么…"
+            placeholder={t('markup.text_placeholder')}
             className="absolute rounded-md border-2 px-2 py-1 text-[12.5px] shadow-pop focus:outline-none"
             style={{ left: textInput.x, top: textInput.y, borderColor: color, color: '#1F1E1B' }}
           />
@@ -184,14 +186,14 @@ export default function MarkupLayer({ onSend, onClose }: { onSend: (shapes: Shap
         </div>
         <button
           onClick={() => setShapes((s) => s.slice(0, -1))}
-          title="撤销"
+          title={t('markup.undo')}
           className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-ink-muted hover:bg-sink"
         >
           <Undo2 size={16} />
         </button>
         <button
           onClick={() => setShapes([])}
-          title="清空"
+          title={t('markup.clear')}
           className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-ink-muted hover:bg-sink"
         >
           <Trash2 size={16} />
@@ -206,18 +208,18 @@ export default function MarkupLayer({ onSend, onClose }: { onSend: (shapes: Shap
               if (note.trim() || shapes.length) onSend(shapes, note)
             }
           }}
-          placeholder="说说要改什么，回车或点发送…"
+          placeholder={t('markup.note_placeholder')}
           className="min-w-0 flex-1 rounded-lg bg-panel px-3 py-2 text-[13px] text-ink placeholder:text-ink-faint focus:outline-none"
         />
         <button onClick={onClose} className="shrink-0 rounded-lg px-2.5 py-2 text-[13px] text-ink-muted hover:bg-sink">
-          取消
+          {t('common.cancel')}
         </button>
         <button
           onClick={() => onSend(shapes, note)}
           disabled={!note.trim() && shapes.length === 0}
           className="flex shrink-0 items-center gap-1.5 rounded-lg bg-coral px-3.5 py-2 text-[13px] font-medium text-white hover:bg-coral-dark disabled:bg-coral-muted"
         >
-          <Send size={14} /> 发送
+          <Send size={14} /> {t('markup.send')}
         </button>
       </div>
     </div>

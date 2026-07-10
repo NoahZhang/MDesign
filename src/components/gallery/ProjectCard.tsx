@@ -4,6 +4,7 @@ import { MoreHorizontal } from 'lucide-react'
 import { galleryDate } from '../../lib/format'
 import { deleteProject, renameProject } from '../../lib/store'
 import { confirmDialog, promptDialog } from '../../lib/dialog'
+import { useT } from '../../lib/i18n'
 import type { Project } from '../../lib/types'
 
 function FolderGlyph() {
@@ -21,6 +22,7 @@ function FolderGlyph() {
 }
 
 export default function ProjectCard({ project, tint = 0 }: { project: Project; tint?: number }) {
+  const t = useT()
   const navigate = useNavigate()
   const [menu, setMenu] = useState(false)
   const tints = ['#E9E5DA', '#ECE8DE', '#E7E2D5']
@@ -45,7 +47,7 @@ export default function ProjectCard({ project, tint = 0 }: { project: Project; t
             'absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-md bg-white/70 text-ink-muted backdrop-blur transition-opacity hover:bg-white hover:text-ink ' +
             (menu ? 'opacity-100' : 'opacity-0 group-hover:opacity-100')
           }
-          aria-label="Project menu"
+          aria-label={t('project.menu_aria')}
         >
           <MoreHorizontal size={16} />
         </button>
@@ -67,22 +69,22 @@ export default function ProjectCard({ project, tint = 0 }: { project: Project; t
                 className="block w-full rounded-lg px-3 py-2 text-left text-[13px] text-ink-soft hover:bg-panel"
                 onClick={async () => {
                   setMenu(false)
-                  const n = await promptDialog('重命名项目', project.name)
+                  const n = await promptDialog(t('project.rename_title'), project.name)
                   if (n) renameProject(project.id, n)
                 }}
               >
-                Rename
+                {t('project.rename')}
               </button>
               <button
                 className="block w-full rounded-lg px-3 py-2 text-left text-[13px] text-coral-dark hover:bg-coral-tint"
                 onClick={async () => {
                   setMenu(false)
-                  if (await confirmDialog(`删除「${project.name}」？此操作不可撤销。`)) {
+                  if (await confirmDialog(t('project.delete_confirm', { name: project.name }))) {
                     deleteProject(project.id)
                   }
                 }}
               >
-                Delete
+                {t('common.delete')}
               </button>
             </div>
           </>
@@ -93,7 +95,7 @@ export default function ProjectCard({ project, tint = 0 }: { project: Project; t
         <div className="min-w-0">
           <div className="truncate text-[15px] font-semibold text-ink">{project.name}</div>
           <div className="mt-0.5 text-[12.5px] text-ink-muted">
-            Your design <span className="text-ink-faint">·</span> {galleryDate(project.updatedAt)}
+            {t('project.your_design')} <span className="text-ink-faint">·</span> {galleryDate(project.updatedAt)}
           </div>
         </div>
         <span className="mt-0.5 shrink-0 rounded-md bg-sink px-2 py-1 text-[11.5px] font-medium text-ink-muted">
