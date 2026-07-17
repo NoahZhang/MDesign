@@ -78,6 +78,13 @@ export function toApp(m: PiMessage): AppMessage {
     else if (c.type === 'toolCall') blocks.push({ type: 'toolCall', id: c.id, name: c.name, input: c.arguments })
     // thinking blocks are dropped from the app DTO (UI doesn't render them)
   }
+  // Surface the provider's error text in the chat — otherwise a failed turn renders
+  // as an empty bubble and the user can't tell a rate limit from a bad key.
+  if (m.stopReason === 'error' && m.errorMessage) blocks.push({ type: 'text', text: `⚠︎ ${m.errorMessage}` })
+  // A thinking-heavy model can burn the whole output budget on (hidden) reasoning and
+  // get cut at max_tokens with no visible text — explain instead of an empty bubble.
+  if (m.stopReason === 'length' && blocks.length === 0)
+    blocks.push({ type: 'text', text: '⚠︎ 输出在 max_tokens 处被截断(思考型模型的推理消耗了全部输出预算)。请在「模型配置」里把该模型的"最大输出 tokens"调大(如 32768)后重试。' })
   const SR = { stop: 'end', length: 'max_tokens', toolUse: 'tool_use', error: 'error', aborted: 'error' } as const
   return { role: 'assistant', content: blocks, stopReason: SR[m.stopReason], usage: { input: m.usage.input, output: m.usage.output } }
 }

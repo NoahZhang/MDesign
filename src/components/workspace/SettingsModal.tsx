@@ -145,6 +145,32 @@ export default function SettingsModal({ onClose }: { onClose: () => void }) {
                 {t('settings.base_url_hint_after')}
               </p>
             </Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label={t('settings.max_tokens')}>
+                <input
+                  type="number"
+                  min={1024}
+                  step={1024}
+                  value={editing.maxTokens ?? ''}
+                  onChange={(e) => setEditing({ ...editing, maxTokens: e.target.value ? Number(e.target.value) : undefined })}
+                  placeholder="8192"
+                  className="input"
+                />
+              </Field>
+              <Field label={t('settings.context_window')}>
+                <input
+                  type="number"
+                  min={8192}
+                  step={1024}
+                  value={editing.contextWindow ?? ''}
+                  onChange={(e) => setEditing({ ...editing, contextWindow: e.target.value ? Number(e.target.value) : undefined })}
+                  placeholder="256000"
+                  className="input"
+                />
+              </Field>
+            </div>
+            <p className="-mt-2 text-[11.5px] leading-snug text-ink-faint">{t('settings.max_tokens_hint')}</p>
+            <p className="text-[11.5px] leading-snug text-ink-faint">{t('settings.context_window_hint')}</p>
 
             <div className="flex gap-2 pt-1">
               <button onClick={() => setEditing(null)} className="rounded-lg px-3 py-2 text-[13.5px] text-ink-muted hover:bg-sink">

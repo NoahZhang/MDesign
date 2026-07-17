@@ -37,6 +37,8 @@ export interface ModelConfig {
   apiKey: string
   /** Max output tokens per request (optional; transport uses a safe default if unset). */
   maxTokens?: number
+  /** Context window in tokens (optional; drives compaction timing — e.g. 1000000 for Kimi K3). */
+  contextWindow?: number
 }
 
 /** A local coding-CLI agent (codex / opencode), run as a child process (CLI mode). */

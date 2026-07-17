@@ -45,7 +45,7 @@ export default function ChatPanel({
     const convTokens = convChars / 4
     const sysTokens = getSystemPrompt('full').length / 4
     const cfg = activeModel(settings)
-    const window = (cfg ? resolveModel(cfg.model, cfg.api).contextWindow : undefined) ?? 128000
+    const window = cfg?.contextWindow ?? (cfg ? resolveModel(cfg.model, cfg.api).contextWindow : undefined) ?? 128000
     return { convK: Math.round(convTokens / 100) / 10, fraction: (convTokens + sysTokens) / window }
   }, [project.messages, settings])
 

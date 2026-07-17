@@ -183,7 +183,11 @@ export async function runAgent(args: RunArgs): Promise<void> {
     },
   ]
 
-  const t = buildTransport(activeModel(settings))
+  const t = buildTransport(activeModel(settings), ({ attempt, delayMs, error }) => {
+    // Transient provider failure (rate limit / overload / network) — tell the user
+    // we're waiting instead of dying silently, then the transport retries.
+    emit.status({ kind: 'running', label: `模型限流/过载,${Math.round(delayMs / 1000)}s 后重试(第 ${attempt} 次)· ${error.slice(0, 60)}` })
+  })
 
   const base: PiMessage[] = baseMessages.map(toPi)
   const accumulated: PiMessage[] = []
@@ -272,6 +276,9 @@ export async function runAgent(args: RunArgs): Promise<void> {
         break
       case 'message_start':
         streaming = ev.message as PiMessage
+        // The model is actually responding now — clears a lingering "限流重试" label
+        // after a successful retry (nothing else refreshes status mid-turn).
+        emit.status({ kind: 'running', label: '思考中' })
         emitLive()
         break
       case 'message_update': {

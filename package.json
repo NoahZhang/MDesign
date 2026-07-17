@@ -1,7 +1,7 @@
 {
   "name": "mdesign",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.2.1",
   "type": "module",
   "main": "electron/main.cjs",
   "description": "Claude Design — a project-based design workspace (gallery + chat/file workspace)",
@@ -21,15 +21,26 @@
     "productName": "MDesign",
     "asar": false,
     "afterPack": "electron/afterPack.cjs",
-    "files": ["electron/**/*", "package.json", "node_modules/**/*"],
-    "extraResources": [{ "from": "desktop/target/release/mdesign", "to": "mdesign" }],
+    "files": [
+      "electron/**/*",
+      "package.json",
+      "node_modules/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "desktop/target/release/mdesign",
+        "to": "mdesign"
+      }
+    ],
     "mac": {
       "target": "dmg",
       "category": "public.app-category.developer-tools",
       "icon": "desktop/MDesign.icns",
       "identity": null
     },
-    "directories": { "output": "electron-dist" }
+    "directories": {
+      "output": "electron-dist"
+    }
   },
   "dependencies": {
     "@earendil-works/pi-agent-core": "^0.80.2",
