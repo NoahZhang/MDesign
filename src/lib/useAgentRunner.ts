@@ -2,7 +2,7 @@ import { useCallback, useMemo, useRef, useState } from 'react'
 import { resolveModel } from '../pi-ai'
 import type { ContentBlock, Message } from '../pi-ai'
 import { runAgent, type AgentStatus } from '../agent/agent'
-import { getSystemPrompt, projectPrompt } from '../agent/systemPrompt'
+import { CHAT_PROMPT, getSystemPrompt, projectPrompt } from '../agent/systemPrompt'
 import { verifyDesign } from '../agent/verify'
 import { designSystemPrompt } from './designSystem'
 import { isElectron, runAgentViaIpc, runCliViaIpc } from './electronAgent'
@@ -122,7 +122,10 @@ export function useAgentRunner(project: Project, onSelectFile: (path: string) =>
       // may have picked a design system after this callback was memoized (its deps are
       // [project.id, ...], and changing designSystemId doesn't change project.id).
       const liveProject = getState().projects.find((p) => p.id === project.id) ?? project
-      const designSystem = designSystemPrompt(resolveDesignSystem(getState().designSystems, liveProject))
+      // "Other" projects are Chat mode: a plain conversational assistant — no design
+      // prompt, no design system (not even the self-directed directive), no self-check.
+      const isChat = liveProject.category === 'Other'
+      const designSystem = isChat ? '' : designSystemPrompt(resolveDesignSystem(getState().designSystems, liveProject))
 
       // CLI mode (Electron): spawn a coding CLI instead of the API agent loop.
       if (settings.agentMode === 'cli' && isElectron()) {
@@ -140,17 +143,18 @@ export function useAgentRunner(project: Project, onSelectFile: (path: string) =>
         setStatus({ kind: 'running', label: cliLabel(cli) })
         const ac = new AbortController()
         abortRef.current = ac
-        // Inject the same Full design guidance + project/design-system context as API
-        // mode (written to AGENTS.md for the CLI). Tell it to ignore our tool mechanics.
-        const brief =
-          '# MDesign 设计规范(本项目指令)\n' +
-          '你在 MDesign 里为一个设计项目产出真实可用的界面。用你自己的文件读写工具完成;**忽略**下文里关于 write_file / done / ask_questions 等"特定工具与流程"的描述,只采纳其中的**设计原则、质量要求与项目约定**。\n\n' +
-          '## 需求澄清(重要)\n' +
-          '当需求含糊、需要先确认方向时,**不要用普通文字罗列问题**。只输出一个 ```ask 代码块,内容是 JSON,格式如下,然后立即停止、不要创建任何文件:\n' +
-          '```ask\n{"title":"可选标题","questions":[{"id":"snake_case_key","title":"问题文本","subtitle":"可选说明","kind":"text-options","options":["选项1","选项2","选项3"],"multi":false}]}\n```\n' +
-          '每个问题给 3-5 个具体可选项;允许多选时设 multi:true。用户会在界面上选择并把答案发回,届时你再开始构建。\n\n' +
-          getSystemPrompt('full') +
-          projectPrompt(liveProject.name, liveProject.category)
+        // Chat mode gets a light assistant brief; design projects get the Full design
+        // guidance + project context (written to AGENTS.md for the CLI).
+        const brief = isChat
+          ? CHAT_PROMPT + projectPrompt(liveProject.name, liveProject.category)
+          : '# MDesign 设计规范(本项目指令)\n' +
+            '你在 MDesign 里为一个设计项目产出真实可用的界面。用你自己的文件读写工具完成;**忽略**下文里关于 write_file / done / ask_questions 等"特定工具与流程"的描述,只采纳其中的**设计原则、质量要求与项目约定**。\n\n' +
+            '## 需求澄清(重要)\n' +
+            '当需求含糊、需要先确认方向时,**不要用普通文字罗列问题**。只输出一个 ```ask 代码块,内容是 JSON,格式如下,然后立即停止、不要创建任何文件:\n' +
+            '```ask\n{"title":"可选标题","questions":[{"id":"snake_case_key","title":"问题文本","subtitle":"可选说明","kind":"text-options","options":["选项1","选项2","选项3"],"multi":false}]}\n```\n' +
+            '每个问题给 3-5 个具体可选项;允许多选时设 multi:true。用户会在界面上选择并把答案发回,届时你再开始构建。\n\n' +
+            getSystemPrompt('full') +
+            projectPrompt(liveProject.name, liveProject.category)
         const runCli = (p: string, baseMessages: Message[]) =>
           runCliViaIpc({
             projectId: project.id,
@@ -170,7 +174,7 @@ export function useAgentRunner(project: Project, onSelectFile: (path: string) =>
           // checks find problems, resume the CLI session to fix them (bounded). Skipped
           // when verify is off, the run ended on a question, or there's no HTML page.
           let rounds = 0
-          while (settings.verify !== false && !ac.signal.aborted && rounds < 2) {
+          while (!isChat && settings.verify !== false && !ac.signal.aborted && rounds < 2) {
             const proj = getState().projects.find((x) => x.id === project.id)
             const files = proj?.files ?? []
             if (findPendingAsk(proj?.messages ?? [])) break
@@ -223,8 +227,9 @@ export function useAgentRunner(project: Project, onSelectFile: (path: string) =>
       const model = resolveModel(cfg.model, cfg.api)
       const ac = new AbortController()
       abortRef.current = ac
-      const systemPrompt =
-        getSystemPrompt('full') + projectPrompt(liveProject.name, liveProject.category) + designSystem
+      const systemPrompt = isChat
+        ? CHAT_PROMPT + projectPrompt(liveProject.name, liveProject.category)
+        : getSystemPrompt('full') + projectPrompt(liveProject.name, liveProject.category) + designSystem
       try {
         // Electron: the agent loop runs in the Node main process (pi-agent-core +
         // native pi-ai). The browser path stays as a fallback (web/dev outside Electron).
@@ -234,7 +239,7 @@ export function useAgentRunner(project: Project, onSelectFile: (path: string) =>
             settings,
             systemPrompt,
             baseMessages: base,
-            wantVerify: settings.verify !== false,
+            wantVerify: !isChat && settings.verify !== false,
             cbs: {
               onMessages: (m) => setLive([...m]),
               onStatus: setStatus,
@@ -256,7 +261,7 @@ export function useAgentRunner(project: Project, onSelectFile: (path: string) =>
           onToolStream: pushDraft,
           onSelectFile,
           verify:
-            settings.verify !== false
+            !isChat && settings.verify !== false
               ? (path) => verifyDesign(path, getState().projects.find((p) => p.id === project.id)?.files ?? [])
               : undefined,
           signal: ac.signal,

@@ -27,7 +27,7 @@ export const EN: Record<string, string> = {
   'sidebar.cat_prototype': 'Prototype',
   'sidebar.cat_slide_deck': 'Slide deck',
   'sidebar.cat_template': 'Template',
-  'sidebar.cat_other': 'Other',
+  'sidebar.cat_other': 'Chat',
   'sidebar.new_project': 'New project',
   'sidebar.project_name_placeholder': 'Project name',
   'sidebar.visibility_note': 'Only you can see your project by default.',
@@ -188,6 +188,8 @@ export const EN: Record<string, string> = {
 
   // chat panel
   'chat.empty_title': 'Start designing',
+  'chat.empty_title_chat': 'What can I help with?',
+  'chat.empty_desc_chat': 'Ask anything — questions, writing, analysis, code. I can also create files in this project when you need them.',
   'chat.empty_desc': 'Describe a page, prototype, or component. I’ll create the files in this project and preview them on the right.',
   'chat.save_banner': 'Start a new chat to save {k}k tokens of context',
   'chat.save_banner_sub': 'Your project and files stay put.',
@@ -394,7 +396,7 @@ export const ZH: Record<string, string> = {
   'sidebar.cat_prototype': '原型',
   'sidebar.cat_slide_deck': '幻灯片',
   'sidebar.cat_template': '模板',
-  'sidebar.cat_other': '其他',
+  'sidebar.cat_other': '聊天',
   'sidebar.new_project': '新建项目',
   'sidebar.project_name_placeholder': '项目名称',
   'sidebar.visibility_note': '默认情况下只有你能看到你的项目。',
@@ -535,6 +537,8 @@ export const ZH: Record<string, string> = {
   'composer.send': '发送',
 
   'chat.empty_title': '开始设计',
+  'chat.empty_title_chat': '有什么可以帮你?',
+  'chat.empty_desc_chat': '随便聊——提问、写作、分析、代码都行。需要时我也可以在这个项目里创建文件。',
   'chat.empty_desc': '描述一个页面、原型或组件。我会在这个项目中创建文件，并在右侧预览。',
   'chat.save_banner': '开启新对话可节省 {k}k 上下文 token',
   'chat.save_banner_sub': '你的项目和文件都会保留。',

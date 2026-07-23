@@ -3,7 +3,7 @@ import { Loader2 } from 'lucide-react'
 import { resolveModel } from '../../pi-ai'
 import type { Message } from '../../pi-ai'
 import type { AgentStatus } from '../../agent/agent'
-import { getSystemPrompt } from '../../agent/systemPrompt'
+import { CHAT_PROMPT, getSystemPrompt } from '../../agent/systemPrompt'
 import { clearMessages, useSettings } from '../../lib/store'
 import { useT } from '../../lib/i18n'
 import { activeModel } from '../../lib/types'
@@ -43,11 +43,11 @@ export default function ChatPanel({
       return n + c.length
     }, 0)
     const convTokens = convChars / 4
-    const sysTokens = getSystemPrompt('full').length / 4
+    const sysTokens = (project.category === 'Other' ? CHAT_PROMPT.length : getSystemPrompt('full').length) / 4
     const cfg = activeModel(settings)
     const window = cfg?.contextWindow ?? (cfg ? resolveModel(cfg.model, cfg.api).contextWindow : undefined) ?? 128000
     return { convK: Math.round(convTokens / 100) / 10, fraction: (convTokens + sysTokens) / window }
-  }, [project.messages, settings])
+  }, [project.messages, project.category, settings])
 
   const lastIdx = messages.length - 1
   const showBanner = !running && !bannerHidden && usage.fraction >= 0.8
@@ -57,9 +57,11 @@ export default function ChatPanel({
       <div ref={scrollRef} className="thin-scrollbar flex-1 overflow-y-auto px-5 py-5">
         {messages.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center text-center">
-            <p className="text-[15px] font-medium text-ink">{t('chat.empty_title')}</p>
+            <p className="text-[15px] font-medium text-ink">
+              {t(project.category === 'Other' ? 'chat.empty_title_chat' : 'chat.empty_title')}
+            </p>
             <p className="mt-1.5 max-w-[260px] text-[13.5px] leading-relaxed text-ink-muted">
-              {t('chat.empty_desc')}
+              {t(project.category === 'Other' ? 'chat.empty_desc_chat' : 'chat.empty_desc')}
             </p>
           </div>
         ) : (

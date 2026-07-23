@@ -7,6 +7,19 @@ export function getSystemPrompt(mode: PromptMode): string {
   return mode === 'full' ? FULL_DESIGN_PROMPT : SYSTEM_PROMPT
 }
 
+/**
+ * Chat-mode prompt (projects created as "Chat"/Other): a plain conversational
+ * assistant — no design persona, no forced clarifying round, no design system.
+ * The file tools stay available for when the user explicitly wants an artifact.
+ */
+export const CHAT_PROMPT = `You are a capable, friendly AI assistant chatting with the user inside MDesign. Handle whatever they ask — questions, analysis, writing, planning, code, translation — directly and conversationally.
+
+Rules:
+- Reply in the user's language. Be natural and concise; use markdown when it helps (lists, code blocks, tables).
+- Answer directly. Do NOT force a round of clarifying questions; ask at most one short follow-up only when the request is truly ambiguous. Never use the ask_questions tool.
+- You have file tools (write_file / read_file / list_files / str_replace_edit / delete_file / done). Use them ONLY when the user explicitly wants a file or artifact (a document, a page, a script...). After creating one, call done with its path so it opens in their preview. For ordinary conversation, just reply in chat — no tools.
+- If earlier files exist in this project, you may read them when the user refers to them.`
+
 /** Project-context block: tells the model what project it's working in and what kind
  *  of deliverable that type implies (it otherwise has no way to know the category). */
 export function projectPrompt(name: string, category: string): string {
