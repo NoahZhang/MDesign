@@ -268,6 +268,7 @@ export async function runAgent(args: RunArgs): Promise<void> {
 
   // Live tool-call args accumulator → drives the right-panel "writing…" preview.
   let liveTool: { id: string; name: string; args: string } | null = null
+  let lastThinkLabel = ''
 
   const sink = (ev: AgentEvent) => {
     switch (ev.type) {
@@ -278,6 +279,7 @@ export async function runAgent(args: RunArgs): Promise<void> {
         streaming = ev.message as PiMessage
         // The model is actually responding now — clears a lingering "限流重试" label
         // after a successful retry (nothing else refreshes status mid-turn).
+        lastThinkLabel = ''
         emit.status({ kind: 'running', label: '思考中' })
         emitLive()
         break
@@ -286,6 +288,19 @@ export async function runAgent(args: RunArgs): Promise<void> {
         // Stream the tool-call arguments as they're generated (so the right panel
         // shows the file being written live, not only the final result).
         const ame = ev.assistantMessageEvent
+        if (ame?.type === 'thinking_delta' || ame?.type === 'thinking_start') {
+          // Live reasoning progress — heavy thinkers (K3/GLM) can reason for minutes
+          // with nothing visible; show how much has been thought so it doesn't look stuck.
+          const chars = (streaming.content as { type?: string; thinking?: string }[]).reduce(
+            (n, c) => n + (c.type === 'thinking' ? (c.thinking?.length ?? 0) : 0),
+            0,
+          )
+          const label = chars >= 1000 ? `思考中 · 已推理 ${(chars / 1000).toFixed(1)}k 字` : '思考中'
+          if (label !== lastThinkLabel) {
+            lastThinkLabel = label
+            emit.status({ kind: 'running', label })
+          }
+        }
         if (ame?.type === 'toolcall_start') {
           const blk = ame.partial.content[ame.contentIndex] as { id?: string; name?: string } | undefined
           liveTool = { id: blk?.id ?? '', name: blk?.name ?? '', args: '' }
