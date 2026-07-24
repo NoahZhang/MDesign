@@ -274,6 +274,9 @@ export const EN: Record<string, string> = {
   'settings.context_window': 'Context window (optional)',
   'settings.context_window_hint':
     'The model’s context size in tokens (default 256000). Set it to the real window — e.g. 1000000 for Kimi K3 — so long chats aren’t compacted earlier than necessary.',
+  'settings.reasoning_effort': 'Thinking level (reasoning_effort)',
+  'settings.reasoning_effort_hint':
+    'Sent as `reasoning_effort` in the request when set; “none” omits the parameter (provider default). Only for models/gateways that support it, e.g. Kimi K3.',
   'settings.intro': 'Add your own models (Anthropic- or OpenAI-compatible) and pick one to use.',
   'settings.no_model_id': 'No model ID',
   'settings.has_key': 'Key ✓',
@@ -616,6 +619,8 @@ export const ZH: Record<string, string> = {
   'settings.max_tokens_hint': '单次请求的输出上限(默认 8192)。思考也计入——重思考模型(Kimi K3、GLM)建议填 32768,否则可能思考没结束就被截断、回复为空。',
   'settings.context_window': '上下文窗口（可选）',
   'settings.context_window_hint': '模型的上下文大小(默认 256000)。按真实窗口填——如 Kimi K3 填 1000000——长对话才不会被提前压缩。',
+  'settings.reasoning_effort': '思考等级（reasoning_effort）',
+  'settings.reasoning_effort_hint': '设置后请求会带 `reasoning_effort` 参数;选 none 则完全不传(用服务端默认)。仅对支持该参数的模型/网关有效,如 Kimi K3。',
   'settings.intro': '添加你自己的模型（Anthropic 或 OpenAI 兼容），选一个作为当前使用。',
   'settings.no_model_id': '未填模型ID',
   'settings.has_key': 'Key ✓',

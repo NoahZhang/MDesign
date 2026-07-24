@@ -14,6 +14,34 @@ export interface AppModel {
   maxTokens?: number
   /** Context window in tokens; drives compaction timing. Defaults to 256k. */
   contextWindow?: number
+  /** Thinking level sent as `reasoning_effort` in the request body (unset = omit). */
+  reasoningEffort?: 'high' | 'xhigh' | 'max'
+}
+
+// pi-ai has no extra-body hook, so `reasoning_effort` rides in via a marker header:
+// buildTransport sets it on the request headers, and a one-time fetch wrapper moves it
+// into the JSON body (and strips the header) before the request leaves the process.
+const EFFORT_HEADER = 'x-mdesign-reasoning-effort'
+let effortPatchInstalled = false
+function ensureEffortFetchPatch() {
+  if (effortPatchInstalled) return
+  effortPatchInstalled = true
+  const orig = globalThis.fetch
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    try {
+      const headers = new Headers(init?.headers ?? (input instanceof Request ? input.headers : undefined))
+      const effort = headers.get(EFFORT_HEADER)
+      if (effort && init?.body && typeof init.body === 'string') {
+        headers.delete(EFFORT_HEADER)
+        const body = JSON.parse(init.body) as Record<string, unknown>
+        body.reasoning_effort = effort
+        return orig(input, { ...init, headers, body: JSON.stringify(body) })
+      }
+    } catch {
+      /* malformed/non-JSON body — send unmodified */
+    }
+    return orig(input, init)
+  }) as typeof fetch
 }
 
 // A default that virtually every chat model accepts (over-requesting 400s on models
@@ -185,5 +213,9 @@ export function buildTransport(m: AppModel, onRetry?: (info: RetryInfo) => void)
   } as Model<'anthropic-messages' | 'openai-completions'>
 
   const options: SimpleStreamOptions = { apiKey: m.apiKey, maxTokens, cacheRetention: 'short' }
+  if (m.reasoningEffort) {
+    ensureEffortFetchPatch()
+    ;(options as SimpleStreamOptions & { headers?: Record<string, string> }).headers = { [EFFORT_HEADER]: m.reasoningEffort }
+  }
   return { model, options, streamFn: withRetry(streamSimple, onRetry) }
 }

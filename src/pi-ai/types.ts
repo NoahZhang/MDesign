@@ -73,6 +73,8 @@ export interface CallOptions {
   baseUrl?: string
   maxTokens?: number
   temperature?: number
+  /** Thinking level sent as `reasoning_effort` (omit = provider default). */
+  reasoningEffort?: 'high' | 'xhigh' | 'max'
   signal?: AbortSignal
 }
 

@@ -39,6 +39,8 @@ export interface ModelConfig {
   maxTokens?: number
   /** Context window in tokens (optional; drives compaction timing — e.g. 1000000 for Kimi K3). */
   contextWindow?: number
+  /** Thinking level sent as `reasoning_effort` (none = omit the param entirely). */
+  reasoningEffort?: 'high' | 'xhigh' | 'max'
 }
 
 /** A local coding-CLI agent (codex / opencode), run as a child process (CLI mode). */
@@ -94,6 +96,11 @@ export function activeCli(s: Settings): CliAgentConfig | undefined {
 export function cliLabel(c: CliAgentConfig): string {
   const m = c.model && c.model.trim() ? c.model.trim() : '默认模型'
   return c.reasoning ? `${m} · ${c.reasoning}` : m
+}
+
+/** Display label for an API model: name + thinking level when one is set (e.g. "k3 · max"). */
+export function modelLabel(m: ModelConfig): string {
+  return m.reasoningEffort ? `${m.name} · ${m.reasoningEffort}` : m.name
 }
 
 export interface AppUser {

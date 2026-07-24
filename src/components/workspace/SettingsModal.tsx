@@ -171,7 +171,24 @@ export default function SettingsModal({ onClose }: { onClose: () => void }) {
             </div>
             <p className="-mt-2 text-[11.5px] leading-snug text-ink-faint">{t('settings.max_tokens_hint')}</p>
             <p className="text-[11.5px] leading-snug text-ink-faint">{t('settings.context_window_hint')}</p>
-
+            <Field label={t('settings.reasoning_effort')}>
+              <select
+                value={editing.reasoningEffort ?? ''}
+                onChange={(e) =>
+                  setEditing({
+                    ...editing,
+                    reasoningEffort: e.target.value ? (e.target.value as 'high' | 'xhigh' | 'max') : undefined,
+                  })
+                }
+                className="input"
+              >
+                <option value="">none</option>
+                <option value="high">high</option>
+                <option value="xhigh">xhigh</option>
+                <option value="max">max</option>
+              </select>
+              <p className="mt-1.5 text-[11.5px] leading-snug text-ink-faint">{t('settings.reasoning_effort_hint')}</p>
+            </Field>
             <div className="flex gap-2 pt-1">
               <button onClick={() => setEditing(null)} className="rounded-lg px-3 py-2 text-[13.5px] text-ink-muted hover:bg-sink">
                 {t('common.cancel')}

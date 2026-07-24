@@ -113,6 +113,7 @@ export async function* anthropicProvider(
     model: model.id,
     max_tokens: opts.maxTokens ?? 32768,
     temperature: opts.temperature,
+    reasoning_effort: opts.reasoningEffort,
     system,
     messages: toAnthropicMessages(context.messages),
     tools: context.tools?.map((t) => ({

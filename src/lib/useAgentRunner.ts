@@ -253,7 +253,7 @@ export function useAgentRunner(project: Project, onSelectFile: (path: string) =>
         await runAgent({
           projectId: project.id,
           model,
-          callOpts: { apiKey: cfg.apiKey, baseUrl: cfg.baseUrl || undefined },
+          callOpts: { apiKey: cfg.apiKey, baseUrl: cfg.baseUrl || undefined, reasoningEffort: cfg.reasoningEffort },
           baseMessages: base,
           systemPrompt,
           onMessages: (m) => setLive([...m]),

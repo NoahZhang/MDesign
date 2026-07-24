@@ -4,7 +4,7 @@ import { setProjectDesignSystem, updateSettings, useDesignSystems, useSettings }
 import { alertDialog } from '../../lib/dialog'
 import { useT } from '../../lib/i18n'
 import { extractPdfText, type PdfDoc } from '../../lib/pdfText'
-import { activeCli, activeModel, cliLabel, resolveDesignSystem, type Project } from '../../lib/types'
+import { activeCli, activeModel, cliLabel, modelLabel, resolveDesignSystem, type Project } from '../../lib/types'
 
 type Img = { id: string; data: string; mimeType: string; name: string }
 
@@ -47,9 +47,10 @@ export default function Composer({
   const cliAgents = settings.cliAgents ?? []
   const cliMode = settings.agentMode === 'cli'
   const activeCliAgent = activeCli(settings)
+  const activeApiModel = activeModel(settings)
   const modelName = cliMode
     ? (activeCliAgent ? cliLabel(activeCliAgent) : t('composer.no_cli'))
-    : (activeModel(settings)?.name ?? t('composer.no_model'))
+    : (activeApiModel ? modelLabel(activeApiModel) : t('composer.no_model'))
 
   const activeDs = resolveDesignSystem(dss, project)
   const dsName = project.designSystemId === null ? t('composer.no_ds') : activeDs?.name || t('composer.no_ds')
@@ -271,7 +272,7 @@ export default function Composer({
                       (!cliMode && settings.activeId === m.id ? 'font-medium text-ink' : 'text-ink-soft')
                     }
                   >
-                    <span className="truncate">{m.name}</span>
+                    <span className="truncate">{modelLabel(m)}</span>
                     <span className="ml-2 shrink-0 text-[11px] text-ink-faint">{m.api}</span>
                   </button>
                 ))}

@@ -68,6 +68,7 @@ export async function* openaiProvider(
   }
   if (opts.maxTokens) body.max_tokens = opts.maxTokens
   if (opts.temperature != null) body.temperature = opts.temperature
+  if (opts.reasoningEffort) body.reasoning_effort = opts.reasoningEffort
   if (context.tools?.length) {
     body.tools = context.tools.map((t) => ({
       type: 'function',
